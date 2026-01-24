@@ -14,25 +14,18 @@ interface SpellHoverCardProps {
 
 export function SpellHoverCard({ spellName, children }: SpellHoverCardProps) {
   const [spell, setSpell] = useState<Spell | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadSpell = async () => {
       try {
-        setLoading(true);
-        setError(null);
         const foundSpell = await searchSpell(spellName);
         setSpell(foundSpell);
         if (!foundSpell) {
           console.warn(`[SpellHoverCard] Spell not found in database: "${spellName}"`);
-          setError("Spell not found");
         }
       } catch (err) {
-        setError("Failed to load spell details");
         console.error("[SpellHoverCard] Error loading spell:", err);
       } finally {
-        setLoading(false);
       }
     };
 

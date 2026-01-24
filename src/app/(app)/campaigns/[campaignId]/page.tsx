@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, Sword, Shield, Zap, Heart, Eye } from "lucide-react";
+import { AlertCircle, Shield, Zap, Heart, Eye } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CharacterSheetViewerDialog } from "@/components/character-sheet-viewer-dialog";
 

@@ -8,6 +8,7 @@
  * In development: Uses tsx to run TypeScript files directly
  * In production: Uses compiled JavaScript files from dist/
  */
+/* eslint-disable @typescript-eslint/no-require-imports */
 
 const { spawn } = require("child_process");
 const path = require("path");
