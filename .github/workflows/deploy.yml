@@ -81,7 +81,7 @@ jobs:
 
       - name: Update Kubernetes Deployment
         run: |
-          kubectl set image deployment/merlins-crystal-ball-app merlins-crystal-ball-app=${{ secrets.DOCKER_USERNAME }}/merlins-crystal-ball-app:latest merlins-crystal-ball-nginx=nginx:latest -n merlins-crystal-ball
+          kubectl set image deployment/merlins-crystal-ball-app merlins-crystal-ball-app=ghcr.io/ninepiece2/merlins-crystal-ball:latest merlins-crystal-ball-nginx=nginx:latest -n merlins-crystal-ball
 
           kubectl annotate deployment merlins-crystal-ball-app \
             kubernetes.io/change-cause="Deployed commit ${{ github.sha }} from branch ${{ github.ref_name }} via GitHub Actions run https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}. Updated images: App=ninepiece2/merlins-crystal-ball-app" \
