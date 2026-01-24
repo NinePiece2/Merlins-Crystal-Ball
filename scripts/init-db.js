@@ -55,13 +55,8 @@ const initialize = async () => {
     // Then run the initialization script
     console.log("\n========== Initializing database data ==========\n");
 
-    if (isDevEnv) {
-      // Development: Use tsx to run TypeScript directly
-      await runCommand("npx", ["tsx", "src/lib/db/init.ts"]);
-    } else {
-      // Production: Use compiled JavaScript
-      await runCommand("node", ["dist/lib/db/init.js"]);
-    }
+    // Always use tsx (available in production container via node_modules)
+    await runCommand("npx", ["tsx", "src/lib/db/init.ts"]);
 
     console.log("\n========== Database initialization complete ==========\n");
     process.exit(0);
