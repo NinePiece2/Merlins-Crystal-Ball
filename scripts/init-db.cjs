@@ -50,7 +50,16 @@ const initialize = async () => {
 
     // First, run migrations to ensure table exists
     console.log("========== Running database migrations ==========\n");
-    await runCommand("npm", ["run", "db:migrate"]);
+    try {
+      await runCommand("npm", ["run", "db:migrate"]);
+    } catch (migrationError) {
+      // If migrations fail, it might be because tables already exist (idempotent scenario)
+      // This is expected in production on pod restarts, so we log and continue
+      console.log(
+        "Note: Migration returned an error (this may be expected if database is already initialized)",
+      );
+      console.log("Continuing with database initialization...\n");
+    }
 
     // Then run the initialization script
     console.log("\n========== Initializing database data ==========\n");

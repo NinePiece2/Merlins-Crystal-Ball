@@ -81,16 +81,27 @@ spec:
             - name: MINIO_BUCKET
               value: "character-sheets-prod"
 
+          # Startup probe - checks if app has finished initializing
+          # Waits up to 5 minutes (30 attempts * 10 seconds) for app to start
+          startupProbe:
+            httpGet:
+              path: /
+              port: 3000
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 30
+
           # Readiness probe - checks if app is ready to serve traffic
+          # Only runs after startup probe succeeds
           readinessProbe:
             httpGet:
               path: /
               port: 3000
-            initialDelaySeconds: 45
-            periodSeconds: 10
+            initialDelaySeconds: 10
+            periodSeconds: 5
             timeoutSeconds: 5
             successThreshold: 1
-            failureThreshold: 3
+            failureThreshold: 2
 
           # Liveness probe - checks if app is still running
           livenessProbe:
