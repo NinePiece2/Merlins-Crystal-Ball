@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:25-alpine AS build
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
@@ -14,7 +14,7 @@ RUN npm run db:generate
 RUN npm run build
 RUN npm prune --omit=dev 
 
-FROM node:24-alpine AS deploy
+FROM node:25-alpine AS deploy
 
 ARG BUILD_DATE
 ARG VCS_REF
