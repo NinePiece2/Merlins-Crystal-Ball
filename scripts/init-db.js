@@ -60,7 +60,7 @@ const initialize = async () => {
       await runCommand("npx", ["tsx", "src/lib/db/init.ts"]);
     } else {
       // Production: Use compiled JavaScript
-      await runCommand("node", ["dist/lib/db/init.js"]);
+      await runCommand("node", ["dist/init.js"]);
     }
 
     console.log("\n========== Database initialization complete ==========\n");
