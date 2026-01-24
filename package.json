@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && tsc --outDir dist --declaration false --module esnext --moduleResolution bundler --esModuleInterop --skipLibCheck src/lib/**/*.ts",
+    "build": "next build && tsc --outDir dist --declaration false --module esnext --moduleResolution bundler --esModuleInterop --skipLibCheck --rootDir src/lib src/lib/**/*.ts",
     "start": "npm run db:migrate && npm run db:init && next start",
     "db:init": "node scripts/init-db.js",
     "lint": "eslint",
