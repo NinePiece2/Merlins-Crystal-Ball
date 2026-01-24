@@ -40,4 +40,4 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/lib/db/migrations ./src/lib/db/migrations
 
 EXPOSE 3000
-CMD ["sh", "-c", "node scripts/init-db.js && npm start"]
+CMD ["sh", "-c", "npm start"]
