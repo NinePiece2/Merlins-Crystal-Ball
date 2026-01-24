@@ -36,6 +36,7 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/data ./data
 COPY --from=build /app/drizzle.config.ts ./
+COPY --from=build /app/src/lib/db/migrations ./src/lib/db/migrations
 
 EXPOSE 3000
 CMD ["sh", "-c", "node scripts/init-db.js && npm start"]
