@@ -2,6 +2,8 @@ name: autofix.ci
 on:
   pull_request:
   push:
+    branches:
+      - main
 permissions: {}
 jobs:
   prettier:
