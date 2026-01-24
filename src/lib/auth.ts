@@ -2,10 +2,10 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "@/lib/db";
 import * as schema from "@/lib/db/schema";
+import { headers } from "next/headers";
 
 interface SignUpResponseUser {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export const auth = betterAuth({
@@ -20,6 +20,14 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
   },
+  user: {
+    additionalFields: {
+      isAdmin: {
+        type: "boolean",
+        defaultValue: false,
+      },
+    },
+  },
   plugins: [],
   callbacks: {
     async signUpResponse(user: SignUpResponseUser) {
@@ -29,3 +37,19 @@ export const auth = betterAuth({
     },
   },
 });
+
+/**
+ * Get the current session from the server
+ */
+export async function getSession() {
+  try {
+    const headersList = await headers();
+    const session = await auth.api.getSession({
+      headers: headersList,
+    });
+    return session;
+  } catch (error) {
+    console.error("Error getting session:", error);
+    return null;
+  }
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,15 +16,7 @@ export default function SetupPage() {
   const [creating, setCreating] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const initializeSetup = async () => {
-      await checkSetupStatus();
-    };
-    initializeSetup();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const checkSetupStatus = async () => {
+  const checkSetupStatus = useCallback(async () => {
     try {
       // Check if setup_complete cookie exists
       const hasCookie = document.cookie.includes("setup_complete");
@@ -44,7 +36,14 @@ export default function SetupPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    const initializeSetup = async () => {
+      await checkSetupStatus();
+    };
+    initializeSetup();
+  }, [checkSetupStatus]);
 
   const handleCreateAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,14 +79,14 @@ export default function SetupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+      <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
         <div>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
       <Card className="w-full max-w-md p-6 space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold">Initial Setup</h1>

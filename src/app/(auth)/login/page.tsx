@@ -31,8 +31,7 @@ export default function LoginPage() {
       }
     };
     checkSetupStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +61,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
       {pageLoading ? (
         <div>Loading...</div>
       ) : (

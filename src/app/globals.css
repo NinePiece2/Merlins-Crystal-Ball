@@ -89,7 +89,7 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.87 0.00 0);
+  --primary: oklch(0.87 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
@@ -122,5 +122,57 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Custom Scrollbar Styles */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: oklch(0.708 0 0);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: background-color 0.2s ease;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.556 0 0);
+    background-clip: content-box;
+  }
+
+  /* Firefox Scrollbar */
+  * {
+    scrollbar-color: oklch(0.708 0 0) transparent;
+    scrollbar-width: thin;
+  }
+
+  *:hover {
+    scrollbar-color: oklch(0.556 0 0) transparent;
+  }
+
+  /* Dark Mode Scrollbar */
+  .dark ::-webkit-scrollbar-thumb {
+    background: oklch(0.556 0 0);
+    background-clip: content-box;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: oklch(0.708 0 0);
+    background-clip: content-box;
+  }
+
+  .dark * {
+    scrollbar-color: oklch(0.556 0 0) transparent;
+  }
+
+  .dark *:hover {
+    scrollbar-color: oklch(0.708 0 0) transparent;
   }
 }
