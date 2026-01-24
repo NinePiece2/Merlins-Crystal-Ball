@@ -1,6 +1,7 @@
 FROM node:24-alpine AS build
 
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 
 WORKDIR /app
 
