@@ -13,7 +13,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:squash": "rm -rf migrations/* && npm run db:setup && npm run db:generate && npm run db:migrate",
+    "db:squash": "rm -rf migrations/* && npm run db:generate && npm run db:migrate",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

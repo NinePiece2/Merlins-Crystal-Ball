@@ -1,6 +1,6 @@
 {
-  "id": "541d7bc1-cae8-49cd-9c14-8fe732865cc8",
-  "prevId": "e10c1d60-c8a5-4bec-8138-6b4c1a4e2c70",
+  "id": "7d622007-88a5-4fcb-a0bc-872079927517",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -95,8 +95,12 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -104,14 +108,19 @@
       "compositePrimaryKeys": {
         "account_user_id_provider_id_pk": {
           "name": "account_user_id_provider_id_pk",
-          "columns": ["user_id", "provider_id"]
+          "columns": [
+            "user_id",
+            "provider_id"
+          ]
         }
       },
       "uniqueConstraints": {
         "account_id_unique": {
           "name": "account_id_unique",
           "nullsNotDistinct": false,
-          "columns": ["id"]
+          "columns": [
+            "id"
+          ]
         }
       },
       "policies": {},
@@ -167,8 +176,12 @@
           "name": "campaign_user_id_user_id_fk",
           "tableFrom": "campaign",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -209,8 +222,12 @@
           "name": "campaign_party_campaign_id_campaign_id_fk",
           "tableFrom": "campaign_party",
           "tableTo": "campaign",
-          "columnsFrom": ["campaign_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "campaign_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -218,8 +235,12 @@
           "name": "campaign_party_character_id_character_id_fk",
           "tableFrom": "campaign_party",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -227,7 +248,10 @@
       "compositePrimaryKeys": {
         "campaign_party_campaign_id_character_id_pk": {
           "name": "campaign_party_campaign_id_character_id_pk",
-          "columns": ["campaign_id", "character_id"]
+          "columns": [
+            "campaign_id",
+            "character_id"
+          ]
         }
       },
       "uniqueConstraints": {},
@@ -257,6 +281,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "player_name": {
+          "name": "player_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "race": {
           "name": "race",
           "type": "text",
@@ -271,12 +301,6 @@
         },
         "background": {
           "name": "background",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "portrait_url": {
-          "name": "portrait_url",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -314,8 +338,12 @@
           "name": "character_user_id_user_id_fk",
           "tableFrom": "character",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -358,7 +386,8 @@
           "name": "extracted_data",
           "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "'{}'::jsonb"
         },
         "uploaded_at": {
           "name": "uploaded_at",
@@ -381,8 +410,12 @@
           "name": "character_level_character_id_character_id_fk",
           "tableFrom": "character_level",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -416,8 +449,12 @@
           "name": "character_level_unique_character_id_character_id_fk",
           "tableFrom": "character_level_unique",
           "tableTo": "character",
-          "columnsFrom": ["character_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "character_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -425,9 +462,51 @@
       "compositePrimaryKeys": {
         "character_level_unique_character_id_level_pk": {
           "name": "character_level_unique_character_id_level_pk",
-          "columns": ["character_id", "level"]
+          "columns": [
+            "character_id",
+            "level"
+          ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.5e_data": {
+      "name": "5e_data",
+      "schema": "",
+      "columns": {
+        "key": {
+          "name": "key",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "value": {
+          "name": "value",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -494,8 +573,12 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -505,7 +588,9 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       },
       "policies": {},
@@ -554,6 +639,13 @@
           "notNull": true,
           "default": false
         },
+        "requires_password_change": {
+          "name": "requires_password_change",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -576,7 +668,9 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       },
       "policies": {},
@@ -620,8 +714,12 @@
           "name": "user_campaign_preference_user_id_user_id_fk",
           "tableFrom": "user_campaign_preference",
           "tableTo": "user",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -629,8 +727,12 @@
           "name": "user_campaign_preference_campaign_id_campaign_id_fk",
           "tableFrom": "user_campaign_preference",
           "tableTo": "campaign",
-          "columnsFrom": ["campaign_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "campaign_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -638,7 +740,10 @@
       "compositePrimaryKeys": {
         "user_campaign_preference_user_id_campaign_id_pk": {
           "name": "user_campaign_preference_user_id_campaign_id_pk",
-          "columns": ["user_id", "campaign_id"]
+          "columns": [
+            "user_id",
+            "campaign_id"
+          ]
         }
       },
       "uniqueConstraints": {},

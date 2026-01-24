@@ -6,7 +6,7 @@ import { eq, and } from "drizzle-orm";
 
 /**
  * GET /api/campaigns/[campaignId]
- * Get a specific campaign with its party members and their data
+ * Get a specific campaign with its party members and their data (campaigns are global)
  */
 export async function GET(
   request: NextRequest,
@@ -19,10 +19,8 @@ export async function GET(
     }
 
     const { campaignId } = await params;
-    const camp = await db
-      .select()
-      .from(campaign)
-      .where(and(eq(campaign.id, campaignId), eq(campaign.userId, session.user.id)));
+    // Fetch campaign without userId filter - campaigns are global
+    const camp = await db.select().from(campaign).where(eq(campaign.id, campaignId));
 
     if (!camp || camp.length === 0) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
@@ -64,7 +62,7 @@ export async function GET(
 
 /**
  * PATCH /api/campaigns/[campaignId]
- * Update a campaign
+ * Update a campaign (only the creator can update)
  */
 export async function PATCH(
   request: NextRequest,
@@ -79,7 +77,7 @@ export async function PATCH(
     const { campaignId } = await params;
     const body = await request.json();
 
-    // Verify ownership
+    // Verify ownership - only creator can update
     const camp = await db
       .select()
       .from(campaign)

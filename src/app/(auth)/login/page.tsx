@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,7 +12,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     const checkSetupStatus = async () => {
@@ -22,7 +20,7 @@ export default function LoginPage() {
         const data = await response.json();
 
         if (data.needsSetup) {
-          router.push("/setup");
+          window.location.href = "/setup";
         }
       } catch (err) {
         console.error("Failed to check setup status:", err);
@@ -31,7 +29,7 @@ export default function LoginPage() {
       }
     };
     checkSetupStatus();
-  }, [router]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +49,15 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/");
+      // Check if user needs to change password on first login
+      const userResponse = await fetch("/api/profile");
+      const userData = await userResponse.json();
+
+      if (userData?.requiresPasswordChange) {
+        window.location.href = "/change-password";
+      } else {
+        window.location.href = "/";
+      }
     } catch (err) {
       setError("An error occurred during login");
       console.error(err);
@@ -61,7 +67,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
       {pageLoading ? (
         <div>Loading...</div>
       ) : (
@@ -108,9 +114,8 @@ export default function LoginPage() {
           </form>
 
           <div className="text-center text-sm text-muted-foreground">
-            Don&apos;t have an account?{" "}
-            <a href="/setup" className="text-primary hover:underline">
-              Create one
+            <a href="/forgot-password" className="text-primary hover:underline">
+              Forgot your password?
             </a>
           </div>
         </Card>

@@ -7,7 +7,7 @@ import { deleteCharacterFiles } from "@/lib/minio";
 
 /**
  * GET /api/characters/[characterId]
- * Get a specific character
+ * Get a specific character (characters are global)
  */
 export async function GET(
   request: NextRequest,
@@ -20,10 +20,8 @@ export async function GET(
     }
 
     const { characterId } = await params;
-    const char = await db
-      .select()
-      .from(character)
-      .where(and(eq(character.id, characterId), eq(character.userId, session.user.id)));
+    // Fetch character without userId filter - characters are global
+    const char = await db.select().from(character).where(eq(character.id, characterId));
 
     if (!char || char.length === 0) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });

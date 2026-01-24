@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Menu, X, Home, Compass, Settings, LogOut, Shield } from "lucide-react";
+import { Menu, X, Home, Compass, Settings, LogOut, Shield, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 
@@ -18,15 +18,12 @@ export function Navigation() {
   const isHomePage = pathname === "/";
   const isCampaignsPage = pathname?.startsWith("/campaigns");
 
-  if (isPending) {
-    return <div className="h-16 bg-card border-b border-border" />;
-  }
-
-  if (!session) {
+  // Don't show anything if no session and not loading (user shouldn't be here)
+  if (!session && !isPending) {
     return null;
   }
 
-  const user = session.user;
+  const user = session?.user;
 
   const handleLogout = async () => {
     await signOut();
@@ -147,12 +144,15 @@ export function Navigation() {
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               <span className="text-sm text-gray-600 dark:text-gray-400">
-                {user.name || user.email}
+                {user?.name || user?.email || "Loading..."}
               </span>
               <Avatar className="w-8 h-8">
-                <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
+                <AvatarImage
+                  src={user?.image || undefined}
+                  alt={user?.name || user?.email || "User"}
+                />
                 <AvatarFallback className="text-xs font-semibold">
-                  {(user.name || user.email)
+                  {(user?.name || user?.email || "U")
                     .split(" ")
                     .slice(0, 2)
                     .map((n) => n[0])
@@ -239,7 +239,7 @@ export function Navigation() {
               {/* User Section */}
               <div className="pt-4 border-t border-border space-y-2">
                 <div className="px-2 text-sm text-gray-600 dark:text-gray-400">
-                  {user.name || user.email}
+                  {user?.name || user?.email || "Loading..."}
                 </div>
                 <Button
                   variant="ghost"

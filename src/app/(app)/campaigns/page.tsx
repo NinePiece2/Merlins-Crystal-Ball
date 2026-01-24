@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import Link from "next/link";
 
 export default function CampaignsPage() {
-  const { data: session } = useSession();
   const [campaigns, setCampaigns] = useState<
     Array<{
       id: string;
@@ -45,17 +43,6 @@ export default function CampaignsPage() {
       setLoading(false);
     }
   };
-
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
-        <Card className="p-8 text-center">
-          <p className="mb-4">Please log in to view campaigns</p>
-          <Button onClick={() => (window.location.href = "/login")}>Log In</Button>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-[calc(100vh-65px)] bg-linear-to-b from-background via-background to-secondary/5">

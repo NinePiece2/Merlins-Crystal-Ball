@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -17,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Download } from "lucide-react";
 
 export interface CharacterSheetData {
   characterName?: string;
@@ -65,6 +67,9 @@ export interface CharacterSheetData {
 interface CharacterSheetDisplayProps {
   data: CharacterSheetData;
   isLoading?: boolean;
+  characterId?: string;
+  level?: number;
+  onDownload?: (characterId: string, level: number) => void;
 }
 
 const abilityAbbreviations: Record<string, string> = {
@@ -98,7 +103,13 @@ const skillAbilityMap: Record<string, string> = {
   Survival: "WIS",
 };
 
-export function CharacterSheetDisplay({ data, isLoading = false }: CharacterSheetDisplayProps) {
+export function CharacterSheetDisplay({
+  data,
+  isLoading = false,
+  characterId,
+  level,
+  onDownload,
+}: CharacterSheetDisplayProps) {
   const characterInitials = useMemo(() => {
     if (!data.characterName) return "?";
     return data.characterName
@@ -218,6 +229,27 @@ export function CharacterSheetDisplay({ data, isLoading = false }: CharacterShee
                     style={{ width: `${hpPercentage}%` }}
                   />
                 </div>
+
+                {/* Download Button */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (characterId && level && onDownload) {
+                      onDownload(characterId, level);
+                    }
+                  }}
+                  disabled={!characterId || !level || !onDownload}
+                  className="mt-3 w-full text-amber-100 hover:text-amber-200 hover:bg-amber-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={
+                    !characterId || !level || !onDownload
+                      ? "Character data not available"
+                      : "Download character sheet"
+                  }
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
               </div>
             </div>
 

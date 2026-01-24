@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useSession } from "@/lib/auth-client";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { CharacterFormDialog } from "@/components/character-form-dialog";
 import { CharacterEditDialog } from "@/components/character-edit-dialog";
@@ -12,7 +10,6 @@ import { FileUpload } from "@/components/file-upload";
 import { Plus } from "lucide-react";
 
 export default function HomePage() {
-  const { data: session } = useSession();
   const [characters, setCharacters] = useState<CharacterWithLevels[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -151,17 +148,6 @@ export default function HomePage() {
     return Math.min(maxLevel + 1, 20);
   };
 
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
-        <Card className="p-8 text-center">
-          <p className="mb-4">Please log in to view your characters</p>
-          <Button onClick={() => (window.location.href = "/login")}>Log In</Button>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[calc(100vh-65px)] bg-linear-to-b from-background via-background to-secondary/5">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
@@ -186,7 +172,7 @@ export default function HomePage() {
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Spinner className="w-8 h-8" />
+            <Spinner className="w-8 h-8 mx-auto" />
           </div>
         ) : (
           <>

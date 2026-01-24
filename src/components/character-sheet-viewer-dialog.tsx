@@ -25,6 +25,11 @@ export function CharacterSheetViewerDialog({
   const [error, setError] = useState<string | null>(null);
   const [characterData, setCharacterData] = useState<CharacterSheetData | null>(null);
 
+  const handleDownload = (charId: string, charLevel: number) => {
+    // Open the PDF download endpoint
+    window.location.href = `/api/characters/${charId}/levels/${charLevel}/pdf`;
+  };
+
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -83,7 +88,14 @@ export function CharacterSheetViewerDialog({
             <div className="p-4 bg-red-100 border border-red-400 text-red-700 rounded">{error}</div>
           )}
 
-          {characterData && !loading && <CharacterSheetDisplay data={characterData} />}
+          {characterData && !loading && (
+            <CharacterSheetDisplay
+              data={characterData}
+              characterId={characterId}
+              level={level}
+              onDownload={handleDownload}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -41,7 +41,7 @@ export class ResendEmailProvider implements EmailProvider {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          from: "Three Dimensions System <system@threedimensionsgta.com>",
+          from: "Merlin's Crystal Ball <noreply@merlinscrystalball.com>",
           to: [message.to],
           cc: [message.cc],
           bcc: [message.bcc],
@@ -51,7 +51,13 @@ export class ResendEmailProvider implements EmailProvider {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = { message: await response.text() };
+      }
 
       if (!response.ok) {
         return {
@@ -92,8 +98,8 @@ export class EmailServiceProvider implements EmailProvider {
       const to = message.to.join(",").trim();
       const cc = message.cc ? message.cc.join(",").trim() : "";
       const bcc = message.bcc ? message.bcc.join(",").trim() : "";
-      const from = "Three Dimensions System";
-      const fromAddress = "system@threedimensionsgta.com";
+      const from = "Merlin's Crystal Ball";
+      const fromAddress = "noreply@romitsagu.com";
 
       const response = await fetch(this.apiUrl, {
         method: "POST",
@@ -114,7 +120,13 @@ export class EmailServiceProvider implements EmailProvider {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        data = await response.json();
+      } else {
+        data = { message: await response.text() };
+      }
 
       if (!response.ok) {
         return {
@@ -203,58 +215,132 @@ const isDevelopment = process.env.NODE_ENV === "development" || process.env.ENVI
  */
 export const emailTemplates = {
   accountCreated: (email: string, password: string, loginUrl: string, userName?: string) => ({
-    subject: "Welcome to PrismAuth - Account Created",
+    subject: `${isDevelopment ? "[Dev] " : ""}Welcome to Merlin's Crystal Ball - Account Created`,
     html: `
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Welcome to PrismAuth</title>
+          <title>Welcome to Merlin's Crystal Ball</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; background-color: #09090b; }
+            .header { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 40px 20px; text-align: center; color: white; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: 0.5px; }
+            .header p { margin: 8px 0 0 0; font-size: 13px; opacity: 0.9; }
+            .content { padding: 40px 30px; color: #e4e4e7; line-height: 1.7; }
+            .greeting { font-size: 20px; font-weight: 600; color: #fafafa; margin: 0 0 12px 0; }
+            .intro-text { color: #d4d4d8; margin: 0 0 28px 0; font-size: 14px; }
+            .credentials-box { background: linear-gradient(135deg, #1e1b4b 0%, #27272a 100%); padding: 24px; border-radius: 12px; border: 1px solid #3f3f46; margin: 28px 0; }
+            .credential-item { margin-bottom: 16px; }
+            .credential-item:last-child { margin-bottom: 0; }
+            .credential-label { font-size: 12px; font-weight: 600; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+            .credential-value { font-family: 'Courier New', monospace; font-size: 14px; color: #fafafa; background: #0f0f12; padding: 12px 16px; border-radius: 8px; border-left: 3px solid #6366f1; word-break: break-all; }
+            .warning-box { background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(244, 63, 94, 0.1) 100%); padding: 20px; border-radius: 12px; border: 1px solid #ef4444; margin: 28px 0; border-left: 4px solid #ef4444; }
+            .warning-title { margin: 0 0 8px 0; color: #fecaca; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+            .warning-text { margin: 0; color: #fca5a5; font-size: 13px; line-height: 1.5; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); color: white; padding: 16px 36px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 28px 0; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); text-align: center; transition: transform 0.2s, box-shadow 0.2s; }
+            .cta-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4); }
+            .cta-container { text-align: center; }
+            .security-note { color: #a1a1aa; font-size: 12px; line-height: 1.6; margin: 28px 0 0 0; padding-top: 20px; border-top: 1px solid #27272a; }
+            .next-steps { background: #0f0f12; padding: 20px; border-radius: 8px; border: 1px solid #27272a; margin: 28px 0; }
+            .next-steps h3 { margin: 0 0 12px 0; color: #fafafa; font-size: 14px; font-weight: 600; }
+            .next-steps ol { margin: 0; padding-left: 20px; color: #d4d4d8; font-size: 13px; }
+            .next-steps li { margin-bottom: 8px; }
+            .footer { background: #0f0f12; padding: 24px 30px; text-align: center; color: #52525b; font-size: 11px; border-top: 1px solid #27272a; }
+            .footer p { margin: 4px 0; }
+            @media (max-width: 600px) {
+              .content { padding: 24px 16px; }
+              .header { padding: 32px 16px; }
+              .header h1 { font-size: 24px; }
+              .greeting { font-size: 18px; }
+              .cta-button { display: block; width: 100%; box-sizing: border-box; }
+            }
+          </style>
         </head>
-        <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: #000000; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">PrismAuth</h1>
-          </div>
-          <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
-            <h2 style="color: #333; margin-top: 0;">Welcome to PrismAuth!</h2>
-            ${userName ? `<p>Hi ${userName},</p>` : "<p>Hi there,</p>"}
-            <p>An administrator has created an account for you. Here are your login credentials:</p>
-            <div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid #e0e0e0; margin: 20px 0;">
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${email}</p>
-              <p style="margin: 8px 0;"><strong>Temporary Password:</strong> <code style="background: #f0f0f0; padding: 4px 8px; border-radius: 3px; font-size: 14px;">${password}</code></p>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔮 Merlin's Crystal Ball</h1>
+              <p>D&D Campaign & Character Manager</p>
             </div>
-            <p style="color: #e74c3c; font-weight: bold;">⚠️ You will be required to change this password on your first login.</p>
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}" style="background: #000000; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Login to Your Account</a>
+            
+            <div class="content">
+              <p class="greeting">Welcome, Adventurer${userName ? `, ${userName}` : ""}!</p>
+              
+              <p class="intro-text">Your account has been created and you're ready to begin managing your epic campaigns and legendary characters. Your login credentials are below.</p>
+              
+              <div class="credentials-box">
+                <div class="credential-item">
+                  <div class="credential-label">📧 Email Address</div>
+                  <div class="credential-value">${email}</div>
+                </div>
+                <div class="credential-item">
+                  <div class="credential-label">🔐 Temporary Password</div>
+                  <div class="credential-value">${password}</div>
+                </div>
+              </div>
+              
+              <div class="warning-box">
+                <p class="warning-title">⚠️ Action Required: Change Your Password</p>
+                <p class="warning-text">You will be required to change your temporary password on your first login. Choose a strong, unique password to protect your account.</p>
+              </div>
+              
+              <div class="cta-container">
+                <a href="${loginUrl}" class="cta-button">Begin Your Journey</a>
+              </div>
+              
+              <div class="next-steps">
+                <h3>What happens next?</h3>
+                <ol>
+                  <li>Click the button above to log in with your email and temporary password</li>
+                  <li>You'll be prompted to change your password to something secure</li>
+                  <li>Start creating your first campaign and characters!</li>
+                </ol>
+              </div>
+              
+              <p class="security-note">
+                <strong>Security Tip:</strong> Never share your password with anyone. Merlin's Crystal Ball staff will never ask for your password via email. If you didn't create this account, please let us know immediately.
+              </p>
             </div>
-            <p style="color: #666; font-size: 14px;">
-              For security reasons, please change your password immediately after logging in.
-            </p>
-          </div>
-          <div style="text-align: center; margin-top: 20px; color: #999; font-size: 12px;">
-            <p>© ${new Date().getFullYear()} PrismAuth. All rights reserved.</p>
+            
+            <div class="footer">
+              <p>© ${new Date().getFullYear()} Merlin's Crystal Ball. All rights reserved.</p>
+              <p>Manage your campaigns and characters with magic ✨</p>
+            </div>
           </div>
         </body>
       </html>
     `,
     text: `
-Welcome to PrismAuth!
+🔮 Merlin's Crystal Ball - D&D Campaign & Character Manager
 
-${userName ? `Hi ${userName},` : "Hi there,"}
+Welcome, Adventurer${userName ? `, ${userName}` : ""}!
 
-An administrator has created an account for you. Here are your login credentials:
+Your account has been created and you're ready to begin managing your epic campaigns and legendary characters. Your login credentials are below.
 
-Email: ${email}
-Temporary Password: ${password}
+📧 Email Address:
+${email}
 
-⚠️ You will be required to change this password on your first login.
+🔐 Temporary Password:
+${password}
 
-Login here: ${loginUrl}
+⚠️ ACTION REQUIRED: Change Your Password
+You will be required to change your temporary password on your first login. Choose a strong, unique password to protect your account.
 
-For security reasons, please change your password immediately after logging in.
+Begin Your Journey:
+${loginUrl}
 
-© ${new Date().getFullYear()} PrismAuth. All rights reserved.
+What happens next?
+1. Log in with your email and temporary password
+2. You'll be prompted to change your password to something secure
+3. Start creating your first campaign and characters!
+
+Security Tip: Never share your password with anyone. Merlin's Crystal Ball staff will never ask for your password via email. If you didn't create this account, please let us know immediately.
+
+© ${new Date().getFullYear()} Merlin's Crystal Ball. All rights reserved.
+Manage your campaigns and characters with magic ✨
     `.trim(),
   }),
 };

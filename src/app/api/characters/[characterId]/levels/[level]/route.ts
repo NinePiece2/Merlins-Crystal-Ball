@@ -7,7 +7,7 @@ import { deleteFile } from "@/lib/minio";
 
 /**
  * GET /api/characters/[characterId]/levels/[level]
- * Get a specific character level's data
+ * Get a specific character level's data (characters are global)
  */
 export async function GET(
   request: NextRequest,
@@ -26,11 +26,8 @@ export async function GET(
       return NextResponse.json({ error: "Invalid level" }, { status: 400 });
     }
 
-    // Verify character ownership
-    const char = await db
-      .select()
-      .from(character)
-      .where(and(eq(character.id, characterId), eq(character.userId, session.user.id)));
+    // Fetch character without userId filter - characters are global
+    const char = await db.select().from(character).where(eq(character.id, characterId));
 
     if (!char || char.length === 0) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });

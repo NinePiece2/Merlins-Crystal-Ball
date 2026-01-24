@@ -20,11 +20,8 @@ export async function GET(
 
     const { campaignId } = await params;
 
-    // Verify campaign ownership
-    const camp = await db
-      .select()
-      .from(campaign)
-      .where(and(eq(campaign.id, campaignId), eq(campaign.userId, session.user.id)));
+    // Verify campaign exists (campaigns are global)
+    const camp = await db.select().from(campaign).where(eq(campaign.id, campaignId));
 
     if (!camp || camp.length === 0) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
@@ -74,11 +71,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Invalid level (must be 1-20)" }, { status: 400 });
     }
 
-    // Verify campaign ownership
-    const camp = await db
-      .select()
-      .from(campaign)
-      .where(and(eq(campaign.id, campaignId), eq(campaign.userId, session.user.id)));
+    // Verify campaign exists (campaigns are global)
+    const camp = await db.select().from(campaign).where(eq(campaign.id, campaignId));
 
     if (!camp || camp.length === 0) {
       return NextResponse.json({ error: "Campaign not found" }, { status: 404 });

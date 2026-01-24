@@ -180,17 +180,6 @@ export default function SettingsPage() {
     }
   };
 
-  if (!session) {
-    return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
-        <Card className="p-8 text-center">
-          <p className="mb-4">Please log in to view settings</p>
-          <Button onClick={() => (window.location.href = "/login")}>Log In</Button>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[calc(100vh-65px)] bg-linear-to-b from-background via-background to-secondary/5">
       {imageToEdit && (

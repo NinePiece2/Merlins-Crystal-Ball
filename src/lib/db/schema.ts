@@ -8,6 +8,7 @@ export const user = pgTable("user", {
   name: text("name"),
   image: text("image"),
   isAdmin: boolean("is_admin").notNull().default(false),
+  requiresPasswordChange: boolean("requires_password_change").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

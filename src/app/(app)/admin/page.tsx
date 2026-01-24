@@ -87,13 +87,9 @@ export default function AdminPage() {
   useEffect(() => {
     if (isPending) return;
 
-    if (!session) {
-      router.push("/login");
-      return;
-    }
-
+    // Middleware ensures user is authenticated
     const isAdmin =
-      session.user &&
+      session?.user &&
       "isAdmin" in session.user &&
       (session.user as unknown as { isAdmin: boolean }).isAdmin;
 

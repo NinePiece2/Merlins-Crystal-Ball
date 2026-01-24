@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 /**
  * PATCH /api/users/password
@@ -43,6 +46,17 @@ export async function PATCH(request: NextRequest) {
         headers: headersList,
       });
 
+      // Update requiresPasswordChange flag to false after successful password change
+      try {
+        await db
+          .update(user)
+          .set({ requiresPasswordChange: false })
+          .where(eq(user.id, session.user.id));
+      } catch (dbError) {
+        console.error("Failed to update requiresPasswordChange flag:", dbError);
+        // Continue anyway - password was changed successfully
+      }
+
       return NextResponse.json({ success: true });
     } catch (authError: unknown) {
       console.error("Better Auth password change error:", authError);
@@ -55,4 +69,12 @@ export async function PATCH(request: NextRequest) {
     console.error("Error changing password:", error);
     return NextResponse.json({ error: "Failed to change password" }, { status: 500 });
   }
+}
+
+/**
+ * POST /api/users/password
+ * Alias for PATCH - also change user password
+ */
+export async function POST(request: NextRequest) {
+  return PATCH(request);
 }

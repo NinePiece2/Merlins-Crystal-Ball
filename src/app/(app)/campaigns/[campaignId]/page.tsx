@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { AlertCircle, Shield, Zap, Heart, Eye } from "lucide-react";
+import { AlertCircle, Shield, Zap, Heart, Eye, Download } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { CharacterSheetViewerDialog } from "@/components/character-sheet-viewer-dialog";
 
@@ -97,8 +97,8 @@ export default function CampaignDetailPage({
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
         <Card className="p-8 text-center">
-          <p className="mb-4">Please log in to view campaigns</p>
-          <Button onClick={() => (window.location.href = "/login")}>Log In</Button>
+          <p className="mb-4">Loading campaign...</p>
+          <Spinner className="w-8 h-8 mx-auto" />
         </Card>
       </div>
     );
@@ -107,7 +107,7 @@ export default function CampaignDetailPage({
   if (loading || !campaign) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-65px)]">
-        <Spinner className="w-8 h-8" />
+        <Spinner className="w-8 h-8 mx-auto" />
       </div>
     );
   }
@@ -444,20 +444,36 @@ export default function CampaignDetailPage({
                               No character sheet uploaded for this level yet
                             </div>
                           )}
-                          {/* View Button */}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full mt-4 border-amber-700/50 text-amber-100 hover:bg-amber-700/20"
-                            onClick={() => {
-                              setSelectedCharacterId(member.characterId);
-                              setSelectedCharacterName(member.character?.name || "Character");
-                              setViewerOpen(true);
-                            }}
-                          >
-                            <Eye className="w-4 h-4 mr-2" />
-                            View Full Character Sheet
-                          </Button>
+                          {/* View and Download Buttons */}
+                          <div className="flex gap-2 mt-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="flex-1 border-amber-700/50 text-amber-100 hover:bg-amber-700/20"
+                              onClick={() => {
+                                setSelectedCharacterId(member.characterId);
+                                setSelectedCharacterName(member.character?.name || "Character");
+                                setViewerOpen(true);
+                              }}
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              View Full Character Sheet
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-amber-700/50 text-amber-100 hover:bg-amber-700/20 px-3"
+                              onClick={() => {
+                                window.open(
+                                  `/api/characters/${member.characterId}/levels/${selectedLevel}/pdf`,
+                                  "_blank",
+                                );
+                              }}
+                              title="Download character sheet PDF"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </Card>
                       );
                     },

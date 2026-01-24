@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { user } from "@/lib/db/schema";
-import { getSession } from "@/lib/auth";
+import { auth, getSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { emailService, emailTemplates } from "@/lib/email";
 
 /**
  * Helper function to check if user is admin
@@ -67,40 +68,68 @@ export async function POST(req: NextRequest) {
     // Validate request body
     const validatedData = createUserSchema.parse(body);
 
-    // Use Better Auth to create the user
-    const signUpResponse = await fetch(
-      `${process.env.BETTER_AUTH_URL || "http://localhost:3000"}/api/auth/sign-up/email`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    // Use Better Auth's built-in user creation
+    let userId: string;
+    try {
+      const createdUser = await auth.api.signUpEmail({
+        body: {
           email: validatedData.email,
           password: validatedData.password,
           name: validatedData.name || validatedData.email.split("@")[0],
-        }),
-      },
-    );
+        },
+      });
 
-    if (!signUpResponse.ok) {
-      const data = await signUpResponse.json();
-      return NextResponse.json({ error: data.message || "Failed to create user" }, { status: 400 });
+      if (!createdUser.user) {
+        return NextResponse.json({ error: "Failed to create user" }, { status: 400 });
+      }
+
+      userId = createdUser.user.id;
+    } catch (authError) {
+      console.error("Failed to create user with Better Auth:", authError);
+      const errorMessage =
+        authError instanceof Error && authError.message.includes("already exists")
+          ? "User with this email already exists"
+          : "Failed to create user";
+      return NextResponse.json({ error: errorMessage }, { status: 400 });
     }
 
     // If isAdmin is true, update the user in the database
     if (validatedData.isAdmin) {
       try {
-        // Get the created user from the response
-        const userData = await signUpResponse.json();
-        const userId = userData.user?.id;
-
-        if (userId) {
-          // Update the user's isAdmin status in the database
-          await db.update(user).set({ isAdmin: true }).where(eq(user.id, userId));
-        }
+        await db.update(user).set({ isAdmin: true }).where(eq(user.id, userId));
       } catch (err) {
         console.error("Failed to set admin status:", err);
         // Continue anyway - user was created successfully
       }
+    }
+
+    // Ensure requiresPasswordChange is set to true for first-login password change
+    try {
+      await db.update(user).set({ requiresPasswordChange: true }).where(eq(user.id, userId));
+    } catch (err) {
+      console.error("Failed to set requiresPasswordChange flag:", err);
+      // Continue anyway - user was created successfully
+    }
+
+    // Send welcome email with credentials
+    try {
+      const loginUrl = `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/login`;
+      const template = emailTemplates.accountCreated(
+        validatedData.email,
+        validatedData.password,
+        loginUrl,
+        validatedData.name,
+      );
+
+      await emailService.send({
+        to: [validatedData.email],
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the request if email fails - user was created successfully
     }
 
     return NextResponse.json({ message: "User created successfully" }, { status: 201 });

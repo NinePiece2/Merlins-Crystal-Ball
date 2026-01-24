@@ -79,14 +79,14 @@ export default function SetupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+      <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
         <div>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
+    <div className="min-h-screen flex items-center justify-center bg-linear-to-b from-background to-secondary/20">
       <Card className="w-full max-w-md p-6 space-y-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold">Initial Setup</h1>

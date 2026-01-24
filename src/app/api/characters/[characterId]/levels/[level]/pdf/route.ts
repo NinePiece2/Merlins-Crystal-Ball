@@ -27,11 +27,11 @@ export async function GET(
       return NextResponse.json({ error: "Invalid level" }, { status: 400 });
     }
 
-    // Verify character ownership
+    // Verify character exists (characters are global)
     const char = await db
       .select({ id: character.id, name: character.name })
       .from(character)
-      .where(and(eq(character.id, characterId), eq(character.userId, session.user.id)));
+      .where(eq(character.id, characterId));
 
     if (!char || char.length === 0) {
       return NextResponse.json({ error: "Character not found" }, { status: 404 });

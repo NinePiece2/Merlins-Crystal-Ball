@@ -8,7 +8,7 @@ import { nanoid } from "nanoid";
 
 /**
  * GET /api/campaigns
- * Get all campaigns for the authenticated user
+ * Get all campaigns (global across all users)
  */
 export async function GET() {
   try {
@@ -17,7 +17,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const campaigns = await db.select().from(campaign).where(eq(campaign.userId, session.user.id));
+    // Fetch all campaigns (not filtered by userId - campaigns are global)
+    const campaigns = await db.select().from(campaign);
 
     // Fetch party members for each campaign
     const campaignsWithParties = await Promise.all(

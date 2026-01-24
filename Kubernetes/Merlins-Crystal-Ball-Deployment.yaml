@@ -81,6 +81,27 @@ spec:
             - name: MINIO_BUCKET
               value: "character-sheets-prod"
 
+          # Readiness probe - checks if app is ready to serve traffic
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
+
+          # Liveness probe - checks if app is still running
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
         - name: merlins-crystal-ball-nginx
           image: nginx:latest
           imagePullPolicy: Always
