@@ -2,6 +2,36 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+Create a local.env:
+
+```env
+# Database Configuration
+DATABASE_URL="postgresql://user:password@192.168.10.105:5432/merlins_crystal_ball_dev"
+
+# Better Auth Configuration
+BETTER_AUTH_SECRET="your-super-secret-key-change-this-in-production"
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# MinIO
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_ROOT_USER=user
+MINIO_ROOT_PASSWORD=password
+MINIO_BUCKET=character-sheets
+
+# EmailService
+EMAIL_PROVIDER=emailservice
+EMAIL_SERVICE_API_KEY=your_api_key
+```
+
+In production you van generate the BETTER_AUTH_SECRET using:
+
+```bash
+openssl rand -base64 64
+```
+
 First, run the development server:
 
 ```bash

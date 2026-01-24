@@ -29,11 +29,12 @@ LABEL org.opencontainers.image.title="Merlin's Crystal Ball" \
 WORKDIR /app
 COPY --from=build /app/package.json ./
 COPY --from=build /app/package-lock.json ./
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/data ./data
 
 EXPOSE 3000
 CMD ["sh", "-c", "node scripts/init-db.js && npm start"]

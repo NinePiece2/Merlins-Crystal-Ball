@@ -1,0 +1,12 @@
+Kubernetes
+Dockerfile
+docs
+.git
+.gitignore
+.vscode
+*.md
+.prettierrc.json
+.prettierignore
+.github
+.claude
+test
