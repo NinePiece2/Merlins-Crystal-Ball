@@ -5,9 +5,17 @@ import { document, user } from "@/lib/db/schema";
 import { uploadDocument } from "@/lib/minio";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
+import * as fs from "fs";
+import * as path from "path";
 
 const MAX_FILE_SIZE_MB = 5000; // 5GB max file size
 const CHUNK_SIZE_MB = 100; // 100MB chunks for Cloudflare
+const TEMP_DIR = path.join(process.cwd(), ".tmp-chunks");
+
+// Ensure temp directory exists
+if (!fs.existsSync(TEMP_DIR)) {
+  fs.mkdirSync(TEMP_DIR, { recursive: true });
+}
 
 /**
  * GET /api/documents
@@ -47,6 +55,10 @@ export async function POST(request: NextRequest) {
     const file = formData.get("file") as File;
     const title = formData.get("title") as string;
     const description = (formData.get("description") as string) || "";
+    const uploadId = (formData.get("uploadId") as string) || nanoid();
+    const chunkIndex = formData.get("chunkIndex") as string;
+    const totalChunks = formData.get("totalChunks") as string;
+    const fileType = (formData.get("fileType") as string) || "";
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
@@ -56,41 +68,121 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
     }
 
-    // Validate file type
-    if (file.type !== "application/pdf") {
-      return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 });
+    // Validate file type (only on first chunk or non-chunked upload)
+    const isChunkedUpload = chunkIndex !== null && totalChunks !== null;
+    const shouldValidateType = !isChunkedUpload || (isChunkedUpload && chunkIndex === "0");
+
+    if (shouldValidateType) {
+      const typeToCheck = fileType || file.type;
+      if (typeToCheck !== "application/pdf") {
+        return NextResponse.json({ error: "Only PDF files are supported" }, { status: 400 });
+      }
     }
 
-    // Check file size
-    const fileSizeMB = file.size / (1024 * 1024);
-    if (fileSizeMB > MAX_FILE_SIZE_MB) {
+    // Check file size for this chunk
+    const chunkSizeMB = file.size / (1024 * 1024);
+    if (chunkSizeMB > CHUNK_SIZE_MB + 1) {
       return NextResponse.json(
-        { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
+        { error: `Chunk size exceeds limit of ${CHUNK_SIZE_MB}MB` },
         { status: 400 },
       );
     }
 
-    // Convert file to buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
+    // Handle chunked upload
+    if (chunkIndex !== null && totalChunks !== null) {
+      const uploadDir = path.join(TEMP_DIR, uploadId);
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
 
-    // Upload to MinIO
-    const pdfUrl = await uploadDocument(file.name, buffer, file.size);
+      // Save chunk
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const chunkPath = path.join(uploadDir, `chunk-${chunkIndex}`);
+      fs.writeFileSync(chunkPath, buffer);
 
-    // Create database record
-    const docId = nanoid();
-    const newDocument = {
-      id: docId,
-      title,
-      description,
-      fileName: file.name,
-      fileSize: file.size,
-      pdfUrl,
-      uploadedBy: session.user.id,
-    };
+      // Check if all chunks are received
+      const chunks = fs.readdirSync(uploadDir);
+      const total = parseInt(totalChunks);
 
-    await db.insert(document).values(newDocument);
+      if (chunks.length === total) {
+        // All chunks received, reassemble file
+        const chunks_array = Array.from({ length: total }, (_, i) =>
+          fs.readFileSync(path.join(uploadDir, `chunk-${i}`)),
+        );
+        const completeBuffer = Buffer.concat(chunks_array);
 
-    return NextResponse.json(newDocument, { status: 201 });
+        // Validate complete file size
+        const fileSizeMB = completeBuffer.length / (1024 * 1024);
+        if (fileSizeMB > MAX_FILE_SIZE_MB) {
+          // Clean up
+          fs.rmSync(uploadDir, { recursive: true });
+          return NextResponse.json(
+            { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
+            { status: 400 },
+          );
+        }
+
+        // Upload to MinIO
+        const pdfUrl = await uploadDocument(file.name, completeBuffer, completeBuffer.length);
+
+        // Create database record
+        const docId = nanoid();
+        const newDocument = {
+          id: docId,
+          title,
+          description,
+          fileName: file.name,
+          fileSize: completeBuffer.length,
+          pdfUrl,
+          uploadedBy: session.user.id,
+        };
+
+        await db.insert(document).values(newDocument);
+
+        // Clean up temp files
+        fs.rmSync(uploadDir, { recursive: true });
+
+        return NextResponse.json(newDocument, { status: 201 });
+      } else {
+        // Chunks still being received
+        return NextResponse.json(
+          { message: `Chunk ${parseInt(chunkIndex) + 1}/${total} received` },
+          { status: 202 },
+        );
+      }
+    } else {
+      // Single file upload (not chunked)
+      // Convert file to buffer
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      // Check file size
+      const fileSizeMB = buffer.length / (1024 * 1024);
+      if (fileSizeMB > MAX_FILE_SIZE_MB) {
+        return NextResponse.json(
+          { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
+          { status: 400 },
+        );
+      }
+
+      // Upload to MinIO
+      const pdfUrl = await uploadDocument(file.name, buffer, buffer.length);
+
+      // Create database record
+      const docId = nanoid();
+      const newDocument = {
+        id: docId,
+        title,
+        description,
+        fileName: file.name,
+        fileSize: buffer.length,
+        pdfUrl,
+        uploadedBy: session.user.id,
+      };
+
+      await db.insert(document).values(newDocument);
+
+      return NextResponse.json(newDocument, { status: 201 });
+    }
   } catch (error) {
     console.error("Error uploading document:", error);
     return NextResponse.json({ error: "Failed to upload document" }, { status: 500 });

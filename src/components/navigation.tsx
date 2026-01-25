@@ -106,9 +106,9 @@ export function Navigation() {
                       <TooltipTrigger>
                         <Button
                           variant="ghost"
-                          onClick={() => router.push("/admin/books")}
+                          onClick={() => router.push("/documents")}
                           className={
-                            pathname === "/admin/books" ? "bg-accent text-accent-foreground" : ""
+                            pathname === "/documents" ? "bg-accent text-accent-foreground" : ""
                           }
                           size="sm"
                         >
@@ -269,7 +269,7 @@ export function Navigation() {
                     variant="ghost"
                     className="w-full justify-start"
                     onClick={() => {
-                      router.push("/admin/books");
+                      router.push("/documents");
                       setMobileMenuOpen(false);
                     }}
                   >

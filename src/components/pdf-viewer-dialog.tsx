@@ -58,8 +58,11 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[90vh] flex flex-col overflow-hidden p-0">
-        <DialogHeader className="shrink-0 px-6 py-4 border-b flex flex-row items-center justify-between">
+      <DialogContent
+        className="max-w-none h-[90vh] flex flex-col overflow-hidden p-0"
+        style={{ maxWidth: "95vw" }}
+      >
+        <DialogHeader className="shrink-0 px-6 py-4 border-b flex flex-row items-center justify-between pr-14">
           <DialogTitle>{bookTitle}</DialogTitle>
           <Button
             onClick={handleDownload}
@@ -94,31 +97,6 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
                 className="flex-1 w-full border-0"
                 title={`${bookTitle} PDF Viewer`}
               />
-              <div className="flex items-center justify-between px-6 py-3 bg-white border-t">
-                <Button
-                  onClick={() => setPageNumber(Math.max(1, pageNumber - 1))}
-                  disabled={pageNumber <= 1}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Previous
-                </Button>
-                <span className="text-sm text-gray-600">
-                  Page {pageNumber}
-                  {totalPages > 0 && ` of ${totalPages}`}
-                </span>
-                <Button
-                  onClick={() => setPageNumber(pageNumber + 1)}
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
           )}
         </div>

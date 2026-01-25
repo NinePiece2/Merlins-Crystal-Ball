@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { document } from "@/lib/db/schema";
 import { downloadFile } from "@/lib/minio";
 import { eq } from "drizzle-orm";
+import { PDFDocument } from "pdf-lib";
 
 /**
  * GET /api/documents/[documentId]/pdf
@@ -25,11 +26,23 @@ export async function GET(
     // Download the file from MinIO
     const fileBuffer = await downloadFile(doc[0].pdfUrl);
 
-    // Return the PDF file
-    return new NextResponse(new Uint8Array(fileBuffer), {
+    // Load the PDF and set its title metadata
+    const pdfDoc = await PDFDocument.load(fileBuffer);
+    const documentTitle = doc[0].title || doc[0].fileName.replace(".pdf", "");
+    const cleanFileName = `${documentTitle}.pdf`;
+    pdfDoc.setTitle(documentTitle);
+
+    // Save the modified PDF
+    const modifiedPdfBytes = await pdfDoc.save();
+
+    // Return the PDF file with proper headers
+    const uint8Array = new Uint8Array(modifiedPdfBytes);
+
+    return new NextResponse(uint8Array, {
+      status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${doc[0].fileName}"`,
+        "Content-Disposition": `inline; filename="${cleanFileName}"`,
         "Cache-Control": "private, max-age=3600",
       },
     });
