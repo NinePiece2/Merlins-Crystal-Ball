@@ -290,7 +290,7 @@ export default function AdminPage() {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={() => router.push("/admin/books")}
+              onClick={() => router.push("/documents")}
               variant="outline"
               size="lg"
               className="gap-2"

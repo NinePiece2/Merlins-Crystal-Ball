@@ -325,7 +325,7 @@ export async function listDocuments(): Promise<
       stream.on("end", () => resolve(files));
     });
   } catch (error) {
-    console.error("Error listing D&D books:", error);
+    console.error("Error listing D&D Documents:", error);
     throw error;
   }
 }

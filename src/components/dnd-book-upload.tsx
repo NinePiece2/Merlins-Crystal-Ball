@@ -13,14 +13,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +56,7 @@ export function DocumentUpload({
   const MAX_FILE_SIZE_MB = 5000; // 5GB
 
   const extractTitleFromFilename = (filename: string): string => {
-    return filename.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    return filename.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,13 +145,13 @@ export function DocumentUpload({
   };
 
   const handleConfirmMultiUpload = async () => {
-    setShowConfirmation(false);
     setUploading(true);
     setError("");
     setUploadProgressByFile({});
 
     let completed = 0;
     const total = confirmationData.length;
+    let uploadErrors: string[] = [];
 
     try {
       for (let i = 0; i < confirmationData.length; i++) {
@@ -169,22 +161,40 @@ export function DocumentUpload({
         // Initialize progress for this file
         setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: 0 }));
 
-        await onUpload(doc);
+        try {
+          await onUpload(doc);
 
-        // Mark file as complete
-        completed++;
-        setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: 100 }));
-        setUploadProgress(Math.round((completed / total) * 100));
+          // Mark file as complete
+          completed++;
+          setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: 100 }));
+          setUploadProgress(Math.round((completed / total) * 100));
+        } catch (fileErr) {
+          uploadErrors.push(
+            `${doc.title}: ${fileErr instanceof Error ? fileErr.message : "Upload failed"}`,
+          );
+          // Mark file as failed but continue with next file
+          setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: -1 }));
+        }
       }
 
-      // Reset form
-      setFiles([]);
-      setConfirmationData([]);
-      setUploadProgress(0);
-      setUploadProgressByFile({});
-      onOpenChange(false);
+      // If all files uploaded successfully, close dialog
+      if (uploadErrors.length === 0) {
+        // Reset form
+        setFiles([]);
+        setConfirmationData([]);
+        setUploadProgress(0);
+        setUploadProgressByFile({});
+        setShowConfirmation(false);
+        onOpenChange(false);
+      } else if (uploadErrors.length === total) {
+        // All failed
+        setError(`All uploads failed: ${uploadErrors.join("; ")}`);
+      } else {
+        // Some succeeded, some failed
+        setError(`${completed} of ${total} files uploaded. Failures: ${uploadErrors.join("; ")}`);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(err instanceof Error ? err.message : "Upload process failed");
     } finally {
       setUploading(false);
     }
@@ -288,10 +298,7 @@ export function DocumentUpload({
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">PDF File</label>
-                <div
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -299,21 +306,15 @@ export function DocumentUpload({
                     onChange={handleFileChange}
                     disabled={uploading}
                     className="hidden"
+                    id="single-file-input"
                   />
-
-                  {singleFile ? (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">{singleFile.name}</div>
-                      <div className="text-xs text-gray-500">
-                        {(singleFile.size / (1024 * 1024)).toFixed(2)} MB
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
-                      <div className="text-sm text-gray-600">Click to browse or drag and drop</div>
-                    </div>
-                  )}
+                  <label htmlFor="single-file-input" className="cursor-pointer block">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      {singleFile ? singleFile.name : "Click to select or drag and drop"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">PDF up to 5GB</p>
+                  </label>
                 </div>
               </div>
 
@@ -347,10 +348,7 @@ export function DocumentUpload({
             <form className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">PDF Files</label>
-                <div
-                  className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
-                  onClick={() => fileInputRef.current?.click()}
-                >
+                <div className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors">
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -359,24 +357,25 @@ export function DocumentUpload({
                     onChange={handleFileChange}
                     disabled={uploading}
                     className="hidden"
+                    id="multi-file-input"
                   />
-
-                  {files.length > 0 ? (
-                    <div className="space-y-2">
-                      <div className="text-sm font-medium">{files.length} file(s) selected</div>
-                      <div className="text-xs text-gray-500">
+                  <label htmlFor="multi-file-input" className="cursor-pointer block">
+                    <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm font-medium">
+                      {files.length > 0
+                        ? `${files.length} file(s) selected`
+                        : "Click to select or drag and drop multiple PDFs"}
+                    </p>
+                    {files.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
                         Total size:{" "}
                         {(files.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)).toFixed(2)} MB
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      <Upload className="w-8 h-8 mx-auto text-gray-400" />
-                      <div className="text-sm text-gray-600">
-                        Click to browse or drag and drop multiple PDFs
-                      </div>
-                    </div>
-                  )}
+                      </p>
+                    )}
+                    {files.length === 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">PDF files up to 5GB each</p>
+                    )}
+                  </label>
                 </div>
               </div>
 
@@ -419,7 +418,7 @@ export function DocumentUpload({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      <Dialog
         open={showConfirmation}
         onOpenChange={(open) => {
           if (!uploading) {
@@ -427,186 +426,163 @@ export function DocumentUpload({
           }
         }}
       >
-        <AlertDialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-2xl">Confirm Document Names</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">
-              Review and customize the information for {confirmationData.length} document(s). Click
-              on any field to edit.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">
+              {uploading ? "Uploading Documents" : "Confirm Document Names"}
+            </DialogTitle>
+            <DialogDescription className="text-base">
+              {uploading
+                ? `Uploading ${confirmationData.length} document(s)...`
+                : `Review and customize the information for ${confirmationData.length} document(s). Click on any field to edit.`}
+            </DialogDescription>
+          </DialogHeader>
 
           <Separator />
 
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-3">
-              {confirmationData.map((doc, index) => (
-                <Card
-                  key={index}
-                  className="p-4 border hover:shadow-md transition-all cursor-pointer group"
-                  onClick={() => {
-                    setEditingIndex(index);
-                    setEditingTitle(doc.title);
-                    setEditingDescription(doc.description);
-                  }}
-                >
-                  {editingIndex === index ? (
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                          Document Title
-                        </label>
-                        <Input
-                          type="text"
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onBlur={() => {
-                            handleEditTitle(index, editingTitle);
-                            setEditingIndex(null);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              handleEditTitle(index, editingTitle);
-                              setEditingIndex(null);
-                            }
-                            if (e.key === "Escape") {
-                              setEditingIndex(null);
-                            }
-                          }}
-                          placeholder="Document title"
-                          autoFocus
-                          className="font-medium"
-                        />
-                      </div>
+          <div className="flex-1 overflow-y-auto border rounded-md">
+            <div className="space-y-3 p-4">
+              {confirmationData.map((doc, index) => {
+                const fileKey = `file-${index}`;
+                const fileProgress = uploadProgressByFile[fileKey];
+                const isUploading = uploading && fileProgress !== undefined;
 
-                      <div className="space-y-1">
-                        <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                          Description (Optional)
-                        </label>
-                        <Textarea
-                          value={editingDescription}
-                          onChange={(e) => setEditingDescription(e.target.value)}
-                          onBlur={() => {
-                            handleEditDescription(index, editingDescription);
-                            setEditingIndex(null);
-                          }}
-                          rows={2}
-                          placeholder="Add a brief description..."
-                          className="resize-none"
-                        />
-                      </div>
-
-                      <div className="flex gap-2 justify-end pt-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingIndex(null);
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditTitle(index, editingTitle);
-                            handleEditDescription(index, editingDescription);
-                            setEditingIndex(null);
-                          }}
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
-                          <h3 className="text-sm font-semibold truncate group-hover:text-primary transition">
-                            {doc.title}
-                          </h3>
-                          <Badge variant="secondary" className="shrink-0">
-                            {(doc.file.size / (1024 * 1024)).toFixed(2)} MB
-                          </Badge>
+                return (
+                  <Card key={index} className="p-4 border hover:shadow-md transition-all group">
+                    {editingIndex === index && !isUploading ? (
+                      <div className="space-y-3">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            Document Title
+                          </label>
+                          <Input
+                            type="text"
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleEditTitle(index, editingTitle);
+                                setEditingIndex(null);
+                              }
+                              if (e.key === "Escape") {
+                                setEditingIndex(null);
+                              }
+                            }}
+                            placeholder="Document title"
+                            autoFocus
+                            className="font-medium"
+                          />
                         </div>
 
-                        {doc.description && (
-                          <p className="text-sm text-muted-foreground pl-6">{doc.description}</p>
-                        )}
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                            Description (Optional)
+                          </label>
+                          <Textarea
+                            value={editingDescription}
+                            onChange={(e) => setEditingDescription(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") {
+                                setEditingIndex(null);
+                              }
+                            }}
+                            rows={2}
+                            placeholder="Add a brief description..."
+                            className="resize-none"
+                          />
+                        </div>
 
-                        <p className="text-xs text-muted-foreground pl-6 truncate">
-                          {doc.file.name}
-                        </p>
+                        <div className="flex gap-2 justify-end pt-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingIndex(null);
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditTitle(index, editingTitle);
+                              handleEditDescription(index, editingDescription);
+                              setEditingIndex(null);
+                            }}
+                          >
+                            Save
+                          </Button>
+                        </div>
                       </div>
+                    ) : (
+                      <div
+                        className="flex items-start justify-between gap-4 cursor-pointer"
+                        onClick={() => {
+                          setEditingIndex(index);
+                          setEditingTitle(doc.title);
+                          setEditingDescription(doc.description);
+                        }}
+                      >
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <h3 className="text-sm font-semibold truncate group-hover:text-primary transition">
+                              {doc.title}
+                            </h3>
+                            <Badge variant="secondary" className="shrink-0">
+                              {(doc.file.size / (1024 * 1024)).toFixed(2)} MB
+                            </Badge>
+                          </div>
 
-                      <div className="flex gap-1 shrink-0">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingIndex(index);
-                            setEditingTitle(doc.title);
-                            setEditingDescription(doc.description);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 transition"
-                          title="Edit"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveFile(index);
-                          }}
-                          className="text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
-                          title="Delete"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
+                          {doc.description && (
+                            <p className="text-sm text-muted-foreground pl-6">{doc.description}</p>
+                          )}
+
+                          <p className="text-xs text-muted-foreground pl-6 truncate">
+                            {doc.file.name}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-1 shrink-0">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingIndex(index);
+                              setEditingTitle(doc.title);
+                              setEditingDescription(doc.description);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 transition"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFile(index);
+                            }}
+                            className="text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition"
+                            title="Delete"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-          </ScrollArea>
-
-          {error && (
-            <>
-              <Separator />
-              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span className="text-sm">{error}</span>
-              </div>
-            </>
-          )}
-
-          {uploading && (
-            <>
-              <Separator />
-              <div className="space-y-3">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">
-                    Uploading {confirmationData.length} document(s)...
-                  </span>
-                  <Badge variant="default">{Math.round(uploadProgress)}%</Badge>
-                </div>
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {confirmationData.map((doc, index) => {
-                    const fileKey = `file-${index}`;
-                    const fileProgress = uploadProgressByFile[fileKey] || 0;
-                    return (
-                      <div key={index} className="space-y-1">
+                    )}
+                    {isUploading && (
+                      <div className="space-y-2 pt-2">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <FileText className="w-3 h-3 text-muted-foreground shrink-0" />
@@ -615,14 +591,38 @@ export function DocumentUpload({
                             </span>
                           </div>
                           <span className="text-xs font-medium tabular-nums shrink-0">
-                            {fileProgress}%
+                            {fileProgress === -1 ? "Failed" : `${fileProgress}%`}
                           </span>
                         </div>
-                        <Progress value={fileProgress} className="h-1.5" />
+                        <Progress
+                          value={fileProgress === -1 ? 0 : fileProgress}
+                          className={fileProgress === -1 ? "bg-red-100" : ""}
+                        />
                       </div>
-                    );
-                  })}
-                </div>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+
+          {uploading && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-between">
+                <span className="font-medium text-sm">Overall Progress</span>
+                <Badge variant="default">{Math.round(uploadProgress)}%</Badge>
+              </div>
+              <Progress value={uploadProgress} />
+            </>
+          )}
+
+          {error && (
+            <>
+              <Separator />
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span className="text-sm">{error}</span>
               </div>
             </>
           )}
@@ -640,19 +640,20 @@ export function DocumentUpload({
               }}
               disabled={uploading}
             >
-              Cancel
+              {uploading ? "Uploading..." : "Cancel"}
             </Button>
-            <AlertDialogAction
+            <Button
+              type="button"
               onClick={handleConfirmMultiUpload}
               disabled={uploading || confirmationData.length === 0}
               className="gap-2"
             >
               <Upload className="w-4 h-4" />
               Upload {confirmationData.length} Document(s)
-            </AlertDialogAction>
+            </Button>
           </div>
-        </AlertDialogContent>
-      </AlertDialog>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
