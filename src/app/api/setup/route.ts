@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
 
     // Update the user to be admin
     if (signUpResponse.user?.id) {
-      await db.update(user).set({ isAdmin: true }).where(eq(user.id, signUpResponse.user.id));
+      await db
+        .update(user)
+        .set({ isAdmin: true, requiresPasswordChange: false })
+        .where(eq(user.id, signUpResponse.user.id));
     }
 
     // Create response with setup_complete cookie
