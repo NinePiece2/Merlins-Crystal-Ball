@@ -204,4 +204,130 @@ export async function listCharacterFiles(
   }
 }
 
+/**
+ * Upload a document PDF to MinIO with chunked upload support for large files
+ * @param fileName - The name of the file
+ * @param file - The file buffer or stream
+ * @param fileSize - The total file size in bytes
+ * @returns The object path in MinIO
+ */
+export async function uploadDocument(
+  fileName: string,
+  file: Buffer | Readable,
+  fileSize: number,
+): Promise<string> {
+  const timestamp = Date.now();
+  const objectPath = `documents/${timestamp}-${fileName}`;
+
+  try {
+    await minioClient.putObject(BUCKET_NAME, objectPath, file as Readable, fileSize);
+    return objectPath;
+  } catch (error: unknown) {
+    console.error("Error uploading document:", error);
+    throw error;
+  }
+}
+
+/**
+ * Upload a large file in chunks to MinIO
+ * Useful for files > 100MB that exceed Cloudflare limits
+ * @param objectName - The name/path of the object in MinIO
+ * @param fileBuffer - The complete file buffer
+ * @param chunkSize - Size of each chunk in bytes (default: 50MB)
+ * @returns The object path in MinIO
+ */
+export async function uploadLargeFile(
+  objectName: string,
+  fileBuffer: Buffer,
+  chunkSize: number = 50 * 1024 * 1024, // 50MB default
+): Promise<string> {
+  try {
+    // For files larger than chunkSize, we'll upload the entire file
+    // MinIO SDK handles multipart uploads internally if needed
+    const fileSize = fileBuffer.length;
+
+    // If file is under chunkSize, just upload directly
+    if (fileSize <= chunkSize) {
+      await minioClient.putObject(BUCKET_NAME, objectName, fileBuffer, fileSize);
+      return objectName;
+    }
+
+    // For large files, MinIO's putObject with streaming will automatically
+    // use multipart upload when the file size is known
+    await minioClient.putObject(BUCKET_NAME, objectName, fileBuffer, fileSize, {
+      "Content-Type": "application/pdf",
+    });
+
+    return objectName;
+  } catch (error: unknown) {
+    console.error("Error uploading large file:", error);
+    throw error;
+  }
+}
+
+/**
+ * Start a chunked upload and return an upload ID
+ * Useful for resumable uploads from the frontend
+ * @param fileName - The name of the file
+ * @returns Upload session info with uploadId and suggestedChunkSize
+ */
+export async function initiateChunkedUpload(fileName: string): Promise<{
+  uploadId: string;
+  objectPath: string;
+  suggestedChunkSize: number;
+}> {
+  const timestamp = Date.now();
+  const objectPath = `documents/${timestamp}-${fileName}`;
+  const uploadId = `${timestamp}-${Math.random().toString(36).substring(7)}`;
+
+  // Return upload session details
+  // The actual multipart upload will be initiated when first chunk is received
+  return {
+    uploadId,
+    objectPath,
+    suggestedChunkSize: 50 * 1024 * 1024, // 50MB chunks
+  };
+}
+
+/**
+ * Delete a document from MinIO
+ * @param objectPath - The object path in MinIO
+ */
+export async function deleteDocument(objectPath: string): Promise<void> {
+  try {
+    await minioClient.removeObject(BUCKET_NAME, objectPath);
+  } catch (error) {
+    console.error("Error deleting document:", error);
+    throw error;
+  }
+}
+
+/**
+ * List all documents in MinIO
+ * @returns Array of document metadata
+ */
+export async function listDocuments(): Promise<
+  Array<{ name: string; size: number; lastModified: Date }>
+> {
+  try {
+    const files: Array<{ name: string; size: number; lastModified: Date }> = [];
+    const stream = minioClient.listObjects(BUCKET_NAME, "documents/", true);
+
+    return new Promise((resolve, reject) => {
+      stream.on("data", (obj: { name: string; size: number; lastModified: Date }) => {
+        files.push({
+          name: obj.name,
+          size: obj.size,
+          lastModified: obj.lastModified,
+        });
+      });
+      stream.on("error", reject);
+      stream.on("end", () => resolve(files));
+    });
+  } catch (error) {
+    console.error("Error listing D&D books:", error);
+    throw error;
+  }
+}
+
 export default minioClient;

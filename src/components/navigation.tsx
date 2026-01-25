@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Menu, X, Home, Compass, Settings, LogOut, Shield, Loader2 } from "lucide-react";
+import { Menu, X, Home, Compass, Settings, LogOut, Shield, Book } from "lucide-react";
 import { useState } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 
@@ -24,6 +24,8 @@ export function Navigation() {
   }
 
   const user = session?.user;
+
+  const isAdmin = user && "isAdmin" in user && (user as unknown as { isAdmin: boolean }).isAdmin;
 
   const handleLogout = async () => {
     await signOut();
@@ -97,23 +99,50 @@ export function Navigation() {
                 </Tooltip>
               </TooltipProvider>
 
-              {user && "isAdmin" in user && (user as unknown as { isAdmin: boolean }).isAdmin && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Button
-                        variant="ghost"
-                        onClick={() => router.push("/admin")}
-                        className={pathname === "/admin" ? "bg-accent text-accent-foreground" : ""}
-                        size="sm"
-                      >
-                        <Shield className="w-4 h-4 mr-2" />
-                        Admin
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Manage users and campaigns</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+              {user && (
+                <>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Button
+                          variant="ghost"
+                          onClick={() => router.push("/admin/books")}
+                          className={
+                            pathname === "/admin/books" ? "bg-accent text-accent-foreground" : ""
+                          }
+                          size="sm"
+                        >
+                          <Book className="w-4 h-4 mr-2" />
+                          Documents
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isAdmin ? "Manage documents" : "View documents"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  {isAdmin && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <Button
+                            variant="ghost"
+                            onClick={() => router.push("/admin")}
+                            className={
+                              pathname === "/admin" ? "bg-accent text-accent-foreground" : ""
+                            }
+                            size="sm"
+                          >
+                            <Shield className="w-4 h-4 mr-2" />
+                            Admin
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Manage users and campaigns</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </>
               )}
             </motion.div>
 
@@ -234,6 +263,19 @@ export function Navigation() {
                 >
                   Campaigns
                 </Button>
+
+                {user && (
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start"
+                    onClick={() => {
+                      router.push("/admin/books");
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    Documents
+                  </Button>
+                )}
               </div>
 
               {/* User Section */}
@@ -251,7 +293,7 @@ export function Navigation() {
                 >
                   Settings
                 </Button>
-                {user && "isAdmin" in user && (user as unknown as { isAdmin: boolean }).isAdmin && (
+                {isAdmin && (
                   <Button
                     variant="ghost"
                     className="w-full justify-start"

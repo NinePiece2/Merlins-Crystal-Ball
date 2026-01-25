@@ -288,9 +288,19 @@ export default function AdminPage() {
               Manage users and system permissions
             </p>
           </div>
-          <Button onClick={() => setShowAddUser(true)} size="lg" className="gap-2">
-            Add User
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              onClick={() => router.push("/admin/books")}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              Documents
+            </Button>
+            <Button onClick={() => setShowAddUser(true)} size="lg" className="gap-2">
+              Add User
+            </Button>
+          </div>
         </div>
 
         {addUserSuccess && (

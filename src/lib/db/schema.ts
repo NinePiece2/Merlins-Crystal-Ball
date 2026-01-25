@@ -288,9 +288,25 @@ export const dndData = pgTable("5e_data", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// Documents/PDFs Table
+export const document = pgTable("document", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(), // Size in bytes
+  pdfUrl: text("pdf_url").notNull(), // Path to the PDF in MinIO
+  uploadedBy: text("uploaded_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
 export type Character = typeof character.$inferSelect;
 export type CharacterLevel = typeof characterLevel.$inferSelect;
 export type Campaign = typeof campaign.$inferSelect;
 export type CampaignParty = typeof campaignParty.$inferSelect;
 export type UserCampaignPreference = typeof userCampaignPreference.$inferSelect;
 export type DndData = typeof dndData.$inferSelect;
+export type Document = typeof document.$inferSelect;
