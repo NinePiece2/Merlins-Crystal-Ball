@@ -72,9 +72,9 @@ export async function POST(request: NextRequest) {
       campaignId,
     });
 
-    // Validate that the campaign exists and belongs to the user
+    // Validate that the campaign exists (campaigns are now global)
     const campaignResult = await db.query.campaign.findFirst({
-      where: (c, { eq, and }) => and(eq(c.id, campaignId), eq(c.userId, session.user.id)),
+      where: (c, { eq }) => eq(c.id, campaignId),
     });
 
     if (!campaignResult) {
