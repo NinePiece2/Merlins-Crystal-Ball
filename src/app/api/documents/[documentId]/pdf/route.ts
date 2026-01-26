@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { document } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { PDFDocument } from "pdf-lib";
 
 /**
  * GET /api/documents/[documentId]/pdf
@@ -22,7 +23,19 @@ export async function GET(
     }
 
     const documentTitle = doc[0].title || doc[0].fileName.replace(".pdf", "");
-    const cleanFileName = `${documentTitle}.pdf`;
+
+    // Encode filename for HTTP headers (RFC 5987)
+    // Remove or replace problematic characters for ASCII fallback
+    const safeAsciiFilename =
+      documentTitle
+        .replace(/[^\x20-\x7E]/g, "") // Remove non-ASCII characters
+        .replace(/["\\]/g, "") // Remove quotes and backslashes
+        .trim() || "document";
+
+    const cleanFileName = `${safeAsciiFilename}.pdf`;
+
+    // For modern browsers, use RFC 5987 encoding with UTF-8
+    const encodedFilename = encodeURIComponent(documentTitle);
 
     // Check if this is a raw PDF request (for embedding or direct download)
     const raw = request.nextUrl.searchParams.get("raw") === "true";
@@ -37,7 +50,65 @@ export async function GET(
 
       const stream = await minioClient.getObject(BUCKET_NAME, doc[0].pdfUrl);
 
-      // Create a ReadableStream from MinIO stream
+      // Size threshold: only modify PDFs smaller than 50MB to avoid performance issues
+      const MAX_SIZE_FOR_METADATA_MODIFICATION = 50 * 1024 * 1024; // 50MB
+      const shouldModifyMetadata = doc[0].fileSize < MAX_SIZE_FOR_METADATA_MODIFICATION;
+
+      if (shouldModifyMetadata) {
+        // Download the entire PDF to modify metadata (only for small files)
+        const chunks: Buffer[] = [];
+
+        await new Promise<void>((resolve, reject) => {
+          stream.on("data", (chunk: Buffer) => {
+            chunks.push(chunk);
+          });
+          stream.on("end", resolve);
+          stream.on("error", reject);
+        });
+
+        const pdfBuffer = Buffer.concat(chunks);
+
+        // Try to load and modify the PDF metadata
+        let modifiedPdfBytes: Uint8Array;
+        try {
+          // Load the PDF with ignoreEncryption to handle encrypted PDFs
+          const pdfDoc = await PDFDocument.load(pdfBuffer, {
+            ignoreEncryption: true,
+          });
+
+          // Set the title metadata
+          pdfDoc.setTitle(documentTitle);
+
+          // Save the modified PDF
+          modifiedPdfBytes = await pdfDoc.save();
+        } catch (pdfError) {
+          // If PDF modification fails, use the original PDF
+          console.warn(`Could not modify PDF metadata for ${documentId}:`, pdfError);
+          modifiedPdfBytes = new Uint8Array(pdfBuffer);
+        }
+
+        // Create a ReadableStream from the modified PDF
+        const readableStream = new ReadableStream({
+          start(controller) {
+            controller.enqueue(modifiedPdfBytes);
+            controller.close();
+          },
+        });
+
+        return new NextResponse(readableStream, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            // Use RFC 5987 encoding for proper Unicode support in filenames
+            "Content-Disposition": directDownload
+              ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
+              : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
+            "Cache-Control": "private, max-age=3600",
+          },
+        });
+      }
+
+      // For large files, stream directly without metadata modification for better performance
       const readableStream = new ReadableStream({
         start(controller) {
           stream.on("data", (chunk: Buffer) => {
@@ -56,12 +127,11 @@ export async function GET(
         status: 200,
         headers: {
           "Content-Type": "application/pdf",
+          // Use RFC 5987 encoding for proper Unicode support in filenames
           "Content-Disposition": directDownload
-            ? `attachment; filename="${cleanFileName}"`
-            : `inline; filename="${cleanFileName}"`,
+            ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
+            : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
           "Cache-Control": "private, max-age=3600",
-          // Set X-Title header for PDF.js to use as title
-          "X-Document-Title": documentTitle,
         },
       });
     }

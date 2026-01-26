@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Track filenames to avoid duplicates
     const usedFilenames = new Set<string>();
 
-    // Add each document to the archive
+    // Add each document to the archive - must be done before finalizing
     for (const doc of docs) {
       try {
         // Get stream from MinIO
@@ -60,6 +60,7 @@ export async function POST(request: NextRequest) {
         usedFilenames.add(filename);
 
         // Append file to archive with streaming
+        // Note: archiver will buffer these internally until finalize() is called
         archive.append(stream as Readable, { name: filename });
       } catch (error) {
         console.error(`Error adding document ${doc.id} to archive:`, error);
@@ -67,8 +68,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Finalize the archive (this must be done before reading from it)
-    archive.finalize();
+    // Finalize the archive - this triggers the actual zip creation
+    // Don't await this, as we want to start streaming immediately
+    const finalizePromise = archive.finalize();
+
+    // Handle any finalization errors
+    finalizePromise.catch((error) => {
+      console.error("Archive finalization error:", error);
+    });
 
     // Convert archive stream to ReadableStream for NextResponse
     const readableStream = new ReadableStream({
