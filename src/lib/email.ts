@@ -211,6 +211,20 @@ export const emailService = new EmailService();
 const isDevelopment = process.env.NODE_ENV === "development" || process.env.ENVIRONMENT === "dev";
 
 /**
+ * HTML escape utility to safely render user content in HTML emails
+ */
+function htmlEscape(text: string): string {
+  const map: Record<string, string> = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
+/**
  * Email Templates
  */
 export const emailTemplates = {
@@ -267,18 +281,18 @@ export const emailTemplates = {
             </div>
             
             <div class="content">
-              <p class="greeting">Welcome, Adventurer${userName ? `, ${userName}` : ""}!</p>
+              <p class="greeting">Welcome, Adventurer${userName ? `, ${htmlEscape(userName)}` : ""}!</p>
               
               <p class="intro-text">Your account has been created and you're ready to begin managing your epic campaigns and legendary characters. Your login credentials are below.</p>
               
               <div class="credentials-box">
                 <div class="credential-item">
                   <div class="credential-label">📧 Email Address</div>
-                  <div class="credential-value">${email}</div>
+                  <div class="credential-value">${htmlEscape(email)}</div>
                 </div>
                 <div class="credential-item">
                   <div class="credential-label">🔐 Temporary Password</div>
-                  <div class="credential-value">${password}</div>
+                  <div class="credential-value">${htmlEscape(password)}</div>
                 </div>
               </div>
               
