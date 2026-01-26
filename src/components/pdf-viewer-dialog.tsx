@@ -41,8 +41,8 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
 
         await response.json();
 
-        // Set up the PDF URL for viewing via PDF.js or iframe
-        setPdfUrl(`/api/documents/${bookId}/pdf`);
+        // Set up the PDF URL for viewing - use raw parameter for embedding
+        setPdfUrl(`/api/documents/${bookId}/pdf?raw=true#toolbar=1&view=FitV`);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load PDF");
       } finally {
@@ -89,11 +89,7 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
 
           {pdfUrl && !loading && !error && (
             <div className="w-full h-full flex flex-col">
-              <iframe
-                src={`${pdfUrl}`}
-                className="flex-1 w-full border-0"
-                title={`${bookTitle} PDF Viewer`}
-              />
+              <iframe src={pdfUrl} className="flex-1 w-full border-0" title={bookTitle} />
             </div>
           )}
         </div>

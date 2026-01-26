@@ -409,20 +409,46 @@ export default function DocumentsPage() {
 
     setDownloadingAll(true);
     try {
-      for (const docId of selectedDocuments) {
-        await new Promise((resolve) => {
-          const link = document.createElement("a");
-          link.href = `/api/documents/${docId}/pdf`;
-          link.download = "";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          setTimeout(resolve, 300);
-        });
+      // Use streaming bulk download endpoint
+      const response = await fetch("/api/documents/download-bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentIds: Array.from(selectedDocuments),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download documents");
       }
-      toast.success(`Downloaded ${selectedDocuments.size} document(s)`);
+
+      // Get the blob from the streaming response
+      const blob = await response.blob();
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      // Extract filename from Content-Disposition header or use default
+      const contentDisposition = response.headers.get("Content-Disposition");
+      const filenameMatch = contentDisposition?.match(/filename="(.+)"/);
+      const filename = filenameMatch
+        ? filenameMatch[1]
+        : `documents_${new Date().toISOString().split("T")[0]}.zip`;
+
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${selectedDocuments.size} document(s) as zip`);
       setSelectedDocuments(new Set());
-    } catch {
+    } catch (error) {
+      console.error("Download error:", error);
       toast.error("Failed to download documents");
     } finally {
       setDownloadingAll(false);
