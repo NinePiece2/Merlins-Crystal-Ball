@@ -134,57 +134,61 @@ export function CharacterGrid({
                 {character.levels.length > 0 ? (
                   <ScrollArea className={character.levels.length > 4 ? "h-48" : "h-auto"}>
                     <div className="space-y-2 pr-4">
-                      {character.levels.map((level) => (
-                        <div
-                          key={level.id}
-                          className="flex justify-between items-center p-2 bg-secondary/20 rounded-md text-sm"
-                        >
-                          <span>Level {level.level}</span>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              title="View character sheet"
-                              onClick={() =>
-                                handleViewLevel(character.id, level.level, character.name)
-                              }
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => onSelectLevel(character.id, level.level)}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            {onDeleteLevel && (
-                              <AlertDialog>
-                                <AlertDialogTrigger>
-                                  <Button variant="ghost" size="sm" className="text-red-600">
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>Delete Level {level.level}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      Are you sure you want to delete Level {level.level} for{" "}
-                                      {character.name}? This action cannot be undone.
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogAction
-                                    onClick={() => onDeleteLevel(character.id, level.level)}
-                                  >
-                                    Delete
-                                  </AlertDialogAction>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                </AlertDialogContent>
-                              </AlertDialog>
-                            )}
+                      {character.levels
+                        .sort((a, b) => b.level - a.level)
+                        .map((level) => (
+                          <div
+                            key={level.id}
+                            className="flex justify-between items-center p-2 bg-secondary/20 rounded-md text-sm"
+                          >
+                            <span>Level {level.level}</span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title="View character sheet"
+                                onClick={() =>
+                                  handleViewLevel(character.id, level.level, character.name)
+                                }
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => onSelectLevel(character.id, level.level)}
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              {onDeleteLevel && (
+                                <AlertDialog>
+                                  <AlertDialogTrigger>
+                                    <Button variant="ghost" size="sm" className="text-red-600">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Delete Level {level.level}
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Are you sure you want to delete Level {level.level} for{" "}
+                                        {character.name}? This action cannot be undone.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogAction
+                                      onClick={() => onDeleteLevel(character.id, level.level)}
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </ScrollArea>
                 ) : (
