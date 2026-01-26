@@ -330,4 +330,85 @@ export async function listDocuments(): Promise<
   }
 }
 
+/**
+ * Upload a chunk for a multipart upload to MinIO
+ * Chunks are stored in a temporary location and can be accessed by any pod
+ * @param chunkPath - The path for the chunk (e.g., uploadId/chunk-0)
+ * @param buffer - The chunk buffer
+ */
+export async function uploadChunk(chunkPath: string, buffer: Buffer): Promise<void> {
+  try {
+    const fullPath = `chunks/${chunkPath}`;
+    await minioClient.putObject(BUCKET_NAME, fullPath, buffer, buffer.length);
+  } catch (error) {
+    console.error(`Error uploading chunk ${chunkPath}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Download a chunk from MinIO
+ * @param chunkPath - The path for the chunk (e.g., uploadId/chunk-0)
+ * @returns The chunk buffer
+ */
+export async function downloadChunk(chunkPath: string): Promise<Buffer> {
+  try {
+    const fullPath = `chunks/${chunkPath}`;
+    const stream = await minioClient.getObject(BUCKET_NAME, fullPath);
+    return new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      stream
+        .on("data", (chunk: Buffer) => chunks.push(chunk))
+        .on("error", reject)
+        .on("end", () => resolve(Buffer.concat(chunks)));
+    });
+  } catch (error) {
+    console.error(`Error downloading chunk ${chunkPath}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * List all chunks for a specific upload
+ * @param uploadId - The upload ID
+ * @returns Array of chunk names (e.g., ['chunk-0', 'chunk-1', ...])
+ */
+export async function listChunks(uploadId: string): Promise<string[]> {
+  try {
+    const chunkNames: string[] = [];
+    const stream = minioClient.listObjects(BUCKET_NAME, `chunks/${uploadId}/`, false);
+
+    return new Promise((resolve, reject) => {
+      stream.on("data", (obj: { name: string }) => {
+        const chunkName = obj.name.replace(`chunks/${uploadId}/`, "");
+        if (chunkName && chunkName.startsWith("chunk-")) {
+          chunkNames.push(chunkName);
+        }
+      });
+      stream.on("error", reject);
+      stream.on("end", () => resolve(chunkNames));
+    });
+  } catch (error) {
+    console.error(`Error listing chunks for upload ${uploadId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Delete all chunks for a specific upload (cleanup after assembly)
+ * @param uploadId - The upload ID
+ */
+export async function deleteChunks(uploadId: string): Promise<void> {
+  try {
+    const chunks = await listChunks(uploadId);
+    for (const chunk of chunks) {
+      const fullPath = `chunks/${uploadId}/${chunk}`;
+      await minioClient.removeObject(BUCKET_NAME, fullPath);
+    }
+  } catch (error) {
+    console.error(`Error deleting chunks for upload ${uploadId}:`, error);
+    throw error;
+  }
+}
+
 export default minioClient;

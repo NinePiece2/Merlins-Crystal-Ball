@@ -157,7 +157,7 @@ export default function DocumentsPage() {
   ) => {
     setUploading(true);
     try {
-      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+      const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
       const file = data.file;
       const fileSize = file.size;
 
@@ -180,39 +180,53 @@ export default function DocumentsPage() {
         }
         onProgress?.(100);
       } else {
-        // For large files, chunk and upload
+        // For large files, chunk and upload in parallel
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
         const uploadId = crypto.randomUUID();
+        const MAX_PARALLEL_UPLOADS = 3; // Upload 3 chunks at a time
 
-        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
-          const start = chunkIndex * CHUNK_SIZE;
-          const end = Math.min(start + CHUNK_SIZE, fileSize);
-          const chunk = file.slice(start, end);
+        // Create array of chunk uploads
+        const chunkUploads = Array.from({ length: totalChunks }, (_, chunkIndex) => ({
+          chunkIndex,
+          start: chunkIndex * CHUNK_SIZE,
+          end: Math.min((chunkIndex + 1) * CHUNK_SIZE, fileSize),
+        }));
 
-          const chunkFormData = new FormData();
-          chunkFormData.append("file", chunk);
-          chunkFormData.append("title", data.title);
-          chunkFormData.append("description", data.description);
-          chunkFormData.append("uploadId", uploadId);
-          chunkFormData.append("chunkIndex", chunkIndex.toString());
-          chunkFormData.append("totalChunks", totalChunks.toString());
-          chunkFormData.append("fileType", file.type);
+        let completedChunks = 0;
 
-          const response = await fetch("/api/documents", {
-            method: "POST",
-            body: chunkFormData,
-          });
+        // Upload chunks in parallel batches
+        for (let i = 0; i < chunkUploads.length; i += MAX_PARALLEL_UPLOADS) {
+          const batch = chunkUploads.slice(i, i + MAX_PARALLEL_UPLOADS);
 
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(
-              error.error || `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`,
-            );
-          }
+          await Promise.all(
+            batch.map(async ({ chunkIndex, start, end }) => {
+              const chunk = file.slice(start, end);
+              const chunkFormData = new FormData();
+              chunkFormData.append("file", chunk);
+              chunkFormData.append("title", data.title);
+              chunkFormData.append("description", data.description);
+              chunkFormData.append("uploadId", uploadId);
+              chunkFormData.append("chunkIndex", chunkIndex.toString());
+              chunkFormData.append("totalChunks", totalChunks.toString());
+              chunkFormData.append("fileType", file.type);
 
-          // Update progress based on chunks uploaded
-          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
-          onProgress?.(progress);
+              const response = await fetch("/api/documents", {
+                method: "POST",
+                body: chunkFormData,
+              });
+
+              if (!response.ok) {
+                const error = await response.json();
+                throw new Error(
+                  error.error || `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`,
+                );
+              }
+
+              completedChunks++;
+              const progress = Math.round((completedChunks / totalChunks) * 100);
+              onProgress?.(progress);
+            }),
+          );
         }
       }
 

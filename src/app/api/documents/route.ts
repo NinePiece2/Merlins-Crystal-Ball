@@ -2,20 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { document, user } from "@/lib/db/schema";
-import { uploadDocument } from "@/lib/minio";
+import { uploadDocument, uploadChunk, downloadChunk, listChunks, deleteChunks } from "@/lib/minio";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
-import * as fs from "fs";
-import * as path from "path";
+
+// Increase timeout for large uploads
+export const maxDuration = 300; // 5 minutes
 
 const MAX_FILE_SIZE_MB = 5000; // 5GB max file size
 const CHUNK_SIZE_MB = 100; // 100MB chunks for Cloudflare
-const TEMP_DIR = path.join(process.cwd(), ".tmp-chunks");
-
-// Ensure temp directory exists
-if (!fs.existsSync(TEMP_DIR)) {
-  fs.mkdirSync(TEMP_DIR, { recursive: true });
-}
 
 /**
  * GET /api/documents
@@ -90,86 +85,99 @@ export async function POST(request: NextRequest) {
 
     // Handle chunked upload
     if (chunkIndex !== null && totalChunks !== null) {
-      const uploadDir = path.join(TEMP_DIR, uploadId);
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+      // Save chunk to MinIO
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const chunkName = `${uploadId}/chunk-${chunkIndex}`;
+
+      try {
+        await uploadChunk(chunkName, buffer);
+      } catch (uploadError) {
+        console.error(`Upload ${uploadId}: Failed to upload chunk ${chunkIndex}:`, uploadError);
+        return NextResponse.json({ error: "Failed to upload chunk" }, { status: 500 });
       }
 
-      // Save chunk
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const chunkPath = path.join(uploadDir, `chunk-${chunkIndex}`);
-      fs.writeFileSync(chunkPath, buffer);
-
       // Check if all chunks are received
-      const chunks = fs.readdirSync(uploadDir).filter((f) => f.startsWith("chunk-"));
-      const total = parseInt(totalChunks);
+      try {
+        const chunks = await listChunks(uploadId);
+        const total = parseInt(totalChunks);
 
-      if (chunks.length === total) {
-        // All chunks received, reassemble file
-        try {
-          // Sort chunks numerically to ensure correct order
-          const sortedChunks = chunks
-            .map((f) => ({
-              index: parseInt(f.replace("chunk-", "")),
-              path: path.join(uploadDir, f),
-            }))
-            .sort((a, b) => a.index - b.index)
-            .map((c) => fs.readFileSync(c.path));
-
-          const completeBuffer = Buffer.concat(sortedChunks);
-
-          // Validate complete file size
-          const fileSizeMB = completeBuffer.length / (1024 * 1024);
-          if (fileSizeMB > MAX_FILE_SIZE_MB) {
-            // Clean up
-            fs.rmSync(uploadDir, { recursive: true });
-            return NextResponse.json(
-              { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
-              { status: 400 },
-            );
-          }
-
-          // Upload to MinIO
-          const pdfUrl = await uploadDocument(file.name, completeBuffer, completeBuffer.length);
-
-          // Create database record
-          const docId = nanoid();
-          const newDocument = {
-            id: docId,
-            title,
-            description,
-            fileName: file.name,
-            fileSize: completeBuffer.length,
-            pdfUrl,
-            uploadedBy: session.user.id,
-          };
-
-          await db.insert(document).values(newDocument);
-
-          // Clean up temp files
-          fs.rmSync(uploadDir, { recursive: true });
-
-          console.log(`Upload ${uploadId}: Successfully uploaded ${fileSizeMB.toFixed(2)}MB file`);
-          return NextResponse.json(newDocument, { status: 201 });
-        } catch (assemblyError) {
-          console.error(`Upload ${uploadId}: Error during chunk reassembly/upload:`, assemblyError);
-          // Clean up on failure
+        if (chunks.length === total) {
+          // All chunks received, reassemble file
           try {
-            fs.rmSync(uploadDir, { recursive: true });
-          } catch {
-            // Ignore cleanup errors
+            // Sort chunks numerically to ensure correct order
+            const sortedChunks = await Promise.all(
+              chunks
+                .map((name) => ({
+                  index: parseInt(name.split("-")[1]),
+                  name,
+                }))
+                .sort((a, b) => a.index - b.index)
+                .map((c) => downloadChunk(`${uploadId}/${c.name}`)),
+            );
+
+            const completeBuffer = Buffer.concat(sortedChunks);
+
+            // Validate complete file size
+            const fileSizeMB = completeBuffer.length / (1024 * 1024);
+            if (fileSizeMB > MAX_FILE_SIZE_MB) {
+              // Clean up chunks
+              await deleteChunks(uploadId);
+              return NextResponse.json(
+                { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
+                { status: 400 },
+              );
+            }
+
+            // Upload to MinIO
+            const pdfUrl = await uploadDocument(file.name, completeBuffer, completeBuffer.length);
+
+            // Create database record
+            const docId = nanoid();
+            const newDocument = {
+              id: docId,
+              title,
+              description,
+              fileName: file.name,
+              fileSize: completeBuffer.length,
+              pdfUrl,
+              uploadedBy: session.user.id,
+            };
+
+            await db.insert(document).values(newDocument);
+
+            // Clean up temp chunks
+            await deleteChunks(uploadId);
+
+            console.log(
+              `Upload ${uploadId}: Successfully uploaded ${fileSizeMB.toFixed(2)}MB file`,
+            );
+            return NextResponse.json(newDocument, { status: 201 });
+          } catch (assemblyError) {
+            console.error(
+              `Upload ${uploadId}: Error during chunk reassembly/upload:`,
+              assemblyError,
+            );
+            // Clean up on failure
+            try {
+              await deleteChunks(uploadId);
+            } catch {
+              // Ignore cleanup errors
+            }
+            throw assemblyError;
           }
-          throw assemblyError;
+        } else {
+          // Chunks still being received
+          console.log(
+            `Upload ${uploadId}: Received chunk ${parseInt(chunkIndex) + 1}/${total}, total chunks in dir: ${chunks.length}`,
+          );
+          return NextResponse.json(
+            { message: `Chunk ${parseInt(chunkIndex) + 1}/${total} received` },
+            { status: 202 },
+          );
         }
-      } else {
-        // Chunks still being received
-        console.log(
-          `Upload ${uploadId}: Received chunk ${parseInt(chunkIndex) + 1}/${total}, total chunks in dir: ${chunks.length}`,
-        );
-        return NextResponse.json(
-          { message: `Chunk ${parseInt(chunkIndex) + 1}/${total} received` },
-          { status: 202 },
-        );
+      } catch (listError) {
+        console.error(`Upload ${uploadId}: Failed to list chunks:`, listError);
+        return NextResponse.json({ error: "Failed to process upload" }, { status: 500 });
       }
     } else {
       // Single file upload (not chunked)
