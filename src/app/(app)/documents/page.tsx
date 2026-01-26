@@ -38,6 +38,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Document {
   id: string;
@@ -98,7 +104,7 @@ export default function DocumentsPage() {
   const [editingDescription, setEditingDescription] = useState("");
   const [bulkDeleteDocIds, setBulkDeleteDocIds] = useState<Set<string> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const isAdmin =
     session?.user &&
@@ -244,7 +250,7 @@ export default function DocumentsPage() {
           if (!response.ok) {
             failedCount++;
           }
-        } catch (err) {
+        } catch {
           failedCount++;
         }
       }
@@ -260,7 +266,7 @@ export default function DocumentsPage() {
       setBulkDeleteDocIds(null);
       setSelectedDocuments(new Set());
       fetchDocuments();
-    } catch (err) {
+    } catch {
       toast.error("Bulk delete failed");
     }
   };
@@ -320,11 +326,12 @@ export default function DocumentsPage() {
     setCurrentPage(1);
   }, [debouncedSearchQuery]);
 
-  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(filteredDocuments.length / itemsPerPage);
   const paginatedDocuments = useMemo(() => {
+    if (itemsPerPage === 0) return filteredDocuments;
     const startIndex = (currentPage - 1) * itemsPerPage;
     return filteredDocuments.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredDocuments, currentPage]);
+  }, [filteredDocuments, currentPage, itemsPerPage]);
 
   const toggleDocumentSelection = (docId: string) => {
     const newSelected = new Set(selectedDocuments);
@@ -368,7 +375,7 @@ export default function DocumentsPage() {
       }
       toast.success(`Downloaded ${selectedDocuments.size} document(s)`);
       setSelectedDocuments(new Set());
-    } catch (err) {
+    } catch {
       toast.error("Failed to download documents");
     } finally {
       setDownloadingAll(false);
@@ -698,28 +705,77 @@ export default function DocumentsPage() {
                 </Table>
               </div>
               {/* Pagination Controls */}
-              {totalPages > 1 && (
+              {(totalPages > 1 || filteredDocuments.length > 10) && (
                 <div className="flex items-center justify-between px-6 py-4 border-t bg-background shrink-0">
-                  <div className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages} ({filteredDocuments.length} total)
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm text-muted-foreground">
+                      {itemsPerPage === 0
+                        ? `All ${filteredDocuments.length} results`
+                        : `Page ${currentPage} of ${totalPages} (${filteredDocuments.length} total)`}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger>
+                        <Button variant="outline" size="sm">
+                          Results per page: {itemsPerPage === 0 ? "All" : itemsPerPage}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setItemsPerPage(10);
+                            setCurrentPage(1);
+                          }}
+                        >
+                          10 per page
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setItemsPerPage(25);
+                            setCurrentPage(1);
+                          }}
+                        >
+                          25 per page
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setItemsPerPage(50);
+                            setCurrentPage(1);
+                          }}
+                        >
+                          50 per page
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setItemsPerPage(0);
+                            setCurrentPage(1);
+                          }}
+                        >
+                          All
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={currentPage === totalPages}
-                    >
-                      Next
-                    </Button>
+                    {itemsPerPage > 0 && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          Previous
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Next
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               )}

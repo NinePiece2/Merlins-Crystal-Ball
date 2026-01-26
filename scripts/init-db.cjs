@@ -52,7 +52,7 @@ const initialize = async () => {
     console.log("========== Running database migrations ==========\n");
     try {
       await runCommand("npm", ["run", "db:migrate"]);
-    } catch (migrationError) {
+    } catch {
       // If migrations fail, it might be because tables already exist (idempotent scenario)
       // This is expected in production on pod restarts, so we log and continue
       console.log(

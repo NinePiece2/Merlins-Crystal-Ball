@@ -4,8 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
-import { Download, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState as useStateReact } from "react";
+import { Download } from "lucide-react";
 
 interface PdfViewerDialogProps {
   isOpen: boolean;
@@ -18,8 +17,6 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
-  const [totalPages, setTotalPages] = useState(0);
 
   const handleDownload = () => {
     window.location.href = `/api/documents/${bookId}/pdf`;
@@ -42,7 +39,7 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
           throw new Error("Failed to fetch document");
         }
 
-        const book = await response.json();
+        await response.json();
 
         // Set up the PDF URL for viewing via PDF.js or iframe
         setPdfUrl(`/api/documents/${bookId}/pdf`);
@@ -93,7 +90,7 @@ export function PdfViewerDialog({ isOpen, bookId, bookTitle, onOpenChange }: Pdf
           {pdfUrl && !loading && !error && (
             <div className="w-full h-full flex flex-col">
               <iframe
-                src={`${pdfUrl}#page=${pageNumber}`}
+                src={`${pdfUrl}`}
                 className="flex-1 w-full border-0"
                 title={`${bookTitle} PDF Viewer`}
               />
