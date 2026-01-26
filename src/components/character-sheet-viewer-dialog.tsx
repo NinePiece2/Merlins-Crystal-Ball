@@ -55,6 +55,7 @@ export function CharacterSheetViewerDialog({
           race: data.character.race,
           class: data.character.class,
           background: data.character.background,
+          profileImage: data.character.profileImage,
           ...data.extractedData,
         };
 

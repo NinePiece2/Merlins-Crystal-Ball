@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { Separator } from "@/components/ui/separator";
@@ -23,6 +23,7 @@ import { Download } from "lucide-react";
 export interface CharacterSheetData {
   characterName?: string;
   playerName?: string;
+  profileImage?: string;
   race?: string;
   background?: string;
   alignment?: string;
@@ -145,6 +146,9 @@ export function CharacterSheetDisplay({
             <div className="flex items-start justify-between gap-6">
               <div className="flex items-start gap-4 flex-1">
                 <Avatar className="h-16 w-16 border-2 border-amber-700 bg-amber-900">
+                  {data.profileImage && (
+                    <AvatarImage src={data.profileImage} alt={data.characterName || "Character"} />
+                  )}
                   <AvatarFallback className="bg-amber-800 text-amber-100 font-bold text-lg">
                     {characterInitials}
                   </AvatarFallback>

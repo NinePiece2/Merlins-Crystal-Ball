@@ -52,6 +52,7 @@ export async function GET(
         race: charData.race,
         class: charData.class,
         background: charData.background,
+        profileImage: charData.profileImage,
       },
       level: charLevel[0].level,
       extractedData: charLevel[0].extractedData || {},
