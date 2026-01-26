@@ -360,12 +360,14 @@ export default function DocumentsPage() {
 
   const filteredDocuments = useMemo(
     () =>
-      documents.filter(
-        (doc) =>
-          doc.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-          doc.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
-          doc.fileName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
-      ),
+      documents
+        .filter(
+          (doc) =>
+            doc.title.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+            doc.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+            doc.fileName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
+        )
+        .sort((a, b) => a.fileName.localeCompare(b.fileName)),
     [documents, debouncedSearchQuery],
   );
 
