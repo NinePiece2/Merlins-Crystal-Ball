@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 export const maxDuration = 300; // 5 minutes
 
 const MAX_FILE_SIZE_MB = 5000; // 5GB max file size
-const CHUNK_SIZE_MB = 200; // 200MB max chunk size
+const CHUNK_SIZE_MB = 10; // 10MB max chunk size (Next.js body limit)
 
 /**
  * GET /api/documents

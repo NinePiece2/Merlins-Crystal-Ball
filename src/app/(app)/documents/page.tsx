@@ -162,25 +162,26 @@ export default function DocumentsPage() {
       const fileSizeMB = fileSize / (1024 * 1024);
 
       // Dynamic chunk size and parallel uploads based on file size
+      // IMPORTANT: Chunk size must be under 10MB due to Next.js body size limit
       let CHUNK_SIZE: number;
       let MAX_PARALLEL_UPLOADS: number;
 
       if (fileSizeMB < 50) {
-        // Small files: 25MB chunks, 2 parallel
-        CHUNK_SIZE = 25 * 1024 * 1024;
+        // Small files: 8MB chunks, 2 parallel
+        CHUNK_SIZE = 8 * 1024 * 1024;
         MAX_PARALLEL_UPLOADS = 2;
       } else if (fileSizeMB < 250) {
-        // Medium files (100-250MB): 50MB chunks, 4 parallel for faster upload
-        CHUNK_SIZE = 50 * 1024 * 1024;
-        MAX_PARALLEL_UPLOADS = 4;
+        // Medium files (100-250MB): 8MB chunks, 6 parallel for faster upload
+        CHUNK_SIZE = 8 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 6;
       } else if (fileSizeMB < 1000) {
-        // Large files: 100MB chunks, 3 parallel
-        CHUNK_SIZE = 100 * 1024 * 1024;
-        MAX_PARALLEL_UPLOADS = 3;
+        // Large files: 8MB chunks, 5 parallel
+        CHUNK_SIZE = 8 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 5;
       } else {
-        // Very large files: 150MB chunks, 2 parallel to avoid memory issues
-        CHUNK_SIZE = 150 * 1024 * 1024;
-        MAX_PARALLEL_UPLOADS = 2;
+        // Very large files: 8MB chunks, 4 parallel to avoid overwhelming server
+        CHUNK_SIZE = 8 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 4;
       }
 
       // If file is small enough, upload directly
