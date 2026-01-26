@@ -151,7 +151,10 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleUpload = async (data: { title: string; description: string; file: File }) => {
+  const handleUpload = async (
+    data: { title: string; description: string; file: File },
+    onProgress?: (progress: number) => void,
+  ) => {
     setUploading(true);
     try {
       const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
@@ -175,6 +178,7 @@ export default function DocumentsPage() {
           const error = await response.json();
           throw new Error(error.error || "Failed to upload document");
         }
+        onProgress?.(100);
       } else {
         // For large files, chunk and upload
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
@@ -205,6 +209,10 @@ export default function DocumentsPage() {
               error.error || `Failed to upload chunk ${chunkIndex + 1}/${totalChunks}`,
             );
           }
+
+          // Update progress based on chunks uploaded
+          const progress = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+          onProgress?.(progress);
         }
       }
 

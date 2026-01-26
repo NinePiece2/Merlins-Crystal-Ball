@@ -26,7 +26,7 @@ interface DocumentToUpload {
 interface DocumentUploadProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (data: DocumentToUpload) => Promise<void>;
+  onUpload: (data: DocumentToUpload, onProgress?: (progress: number) => void) => Promise<void>;
   isLoading?: boolean;
 }
 
@@ -124,11 +124,16 @@ export function DocumentUpload({
     setUploadProgress(0);
 
     try {
-      await onUpload({
-        title: title.trim(),
-        description: description.trim(),
-        file: singleFile,
-      });
+      await onUpload(
+        {
+          title: title.trim(),
+          description: description.trim(),
+          file: singleFile,
+        },
+        (progress) => {
+          setUploadProgress(progress);
+        },
+      );
 
       // Reset form
       setSingleFile(null);
@@ -161,7 +166,16 @@ export function DocumentUpload({
         setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: 0 }));
 
         try {
-          await onUpload(doc);
+          await onUpload(doc, (progress) => {
+            // Update per-file progress
+            setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: progress }));
+            // Update overall progress
+            const totalProgress = Object.values(uploadProgressByFile).reduce(
+              (sum, val) => sum + (val as number),
+              0,
+            );
+            setUploadProgress(Math.round((totalProgress + completed * 100) / total));
+          });
 
           // Mark file as complete
           completed++;
@@ -324,11 +338,13 @@ export function DocumentUpload({
                 </div>
               )}
 
-              {uploading && uploadProgress > 0 && (
+              {uploading && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span>Uploading...</span>
-                    <span>{Math.round(uploadProgress)}%</span>
+                    <span className="font-medium">Uploading...</span>
+                    <span className="font-semibold text-primary">
+                      {Math.round(uploadProgress)}%
+                    </span>
                   </div>
                   <Progress value={uploadProgress} />
                 </div>
