@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { document } from "@/lib/db/schema";
-import { getPresignedUrl } from "@/lib/minio";
 import { eq } from "drizzle-orm";
 
 /**
@@ -94,7 +93,7 @@ export async function GET(
   </style>
 </head>
 <body>
-  <iframe src="/api/documents/${documentId}/pdf?raw=true" title="${documentTitle.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"></iframe>
+  <iframe src="/api/documents/${documentId}/pdf?raw=true#toolbar=1&view=FitV" title="${documentTitle.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;")}"></iframe>
 </body>
 </html>`;
 
