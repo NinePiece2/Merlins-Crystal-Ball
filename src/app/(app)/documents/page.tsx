@@ -207,10 +207,6 @@ export default function DocumentsPage() {
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
         const uploadId = crypto.randomUUID();
 
-        console.log(
-          `Uploading ${fileSizeMB.toFixed(1)}MB file with ${totalChunks} chunks of ${Math.round(CHUNK_SIZE / (1024 * 1024))}MB each, ${MAX_PARALLEL_UPLOADS} parallel uploads`,
-        );
-
         // Create array of chunk uploads
         const chunkUploads = Array.from({ length: totalChunks }, (_, chunkIndex) => ({
           chunkIndex,

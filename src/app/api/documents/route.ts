@@ -153,9 +153,6 @@ export async function POST(request: NextRequest) {
             // Clean up temp chunks
             await deleteChunks(uploadId);
 
-            console.log(
-              `Upload ${uploadId}: Successfully uploaded ${fileSizeMB.toFixed(2)}MB file`,
-            );
             return NextResponse.json(newDocument, { status: 201 });
           } catch (assemblyError) {
             console.error(
@@ -172,9 +169,6 @@ export async function POST(request: NextRequest) {
           }
         } else {
           // Chunks still being received
-          console.log(
-            `Upload ${uploadId}: Received chunk ${parseInt(chunkIndex) + 1}/${total}, total chunks in dir: ${chunks.length}`,
-          );
           return NextResponse.json(
             { message: `Chunk ${parseInt(chunkIndex) + 1}/${total} received` },
             { status: 202 },

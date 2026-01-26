@@ -152,6 +152,7 @@ export function DocumentUpload({
     setUploading(true);
     setError("");
     setUploadProgressByFile({});
+    setUploadProgress(0);
 
     let completed = 0;
     const total = confirmationData.length;
@@ -168,13 +169,13 @@ export function DocumentUpload({
         try {
           await onUpload(doc, (progress) => {
             // Update per-file progress
-            setUploadProgressByFile((prev) => ({ ...prev, [fileKey]: progress }));
-            // Update overall progress
-            const totalProgress = Object.values(uploadProgressByFile).reduce(
-              (sum, val) => sum + (val as number),
-              0,
-            );
-            setUploadProgress(Math.round((totalProgress + completed * 100) / total));
+            setUploadProgressByFile((prev) => {
+              const updated = { ...prev, [fileKey]: progress };
+              // Calculate overall progress: (completed files * 100 + current file progress) / total
+              const overallProgress = Math.round((completed * 100 + progress) / total);
+              setUploadProgress(overallProgress);
+              return updated;
+            });
           });
 
           // Mark file as complete
