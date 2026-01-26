@@ -157,9 +157,31 @@ export default function DocumentsPage() {
   ) => {
     setUploading(true);
     try {
-      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
       const file = data.file;
       const fileSize = file.size;
+      const fileSizeMB = fileSize / (1024 * 1024);
+
+      // Dynamic chunk size and parallel uploads based on file size
+      let CHUNK_SIZE: number;
+      let MAX_PARALLEL_UPLOADS: number;
+
+      if (fileSizeMB < 50) {
+        // Small files: 25MB chunks, 2 parallel
+        CHUNK_SIZE = 25 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 2;
+      } else if (fileSizeMB < 250) {
+        // Medium files (100-250MB): 50MB chunks, 4 parallel for faster upload
+        CHUNK_SIZE = 50 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 4;
+      } else if (fileSizeMB < 1000) {
+        // Large files: 100MB chunks, 3 parallel
+        CHUNK_SIZE = 100 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 3;
+      } else {
+        // Very large files: 150MB chunks, 2 parallel to avoid memory issues
+        CHUNK_SIZE = 150 * 1024 * 1024;
+        MAX_PARALLEL_UPLOADS = 2;
+      }
 
       // If file is small enough, upload directly
       if (fileSize < CHUNK_SIZE) {
@@ -183,7 +205,10 @@ export default function DocumentsPage() {
         // For large files, chunk and upload in parallel
         const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
         const uploadId = crypto.randomUUID();
-        const MAX_PARALLEL_UPLOADS = 3; // Upload 3 chunks at a time
+
+        console.log(
+          `Uploading ${fileSizeMB.toFixed(1)}MB file with ${totalChunks} chunks of ${Math.round(CHUNK_SIZE / (1024 * 1024))}MB each, ${MAX_PARALLEL_UPLOADS} parallel uploads`,
+        );
 
         // Create array of chunk uploads
         const chunkUploads = Array.from({ length: totalChunks }, (_, chunkIndex) => ({

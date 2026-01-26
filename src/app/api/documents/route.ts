@@ -10,7 +10,7 @@ import { eq } from "drizzle-orm";
 export const maxDuration = 300; // 5 minutes
 
 const MAX_FILE_SIZE_MB = 5000; // 5GB max file size
-const CHUNK_SIZE_MB = 100; // 100MB chunks for Cloudflare
+const CHUNK_SIZE_MB = 200; // 200MB max chunk size
 
 /**
  * GET /api/documents
