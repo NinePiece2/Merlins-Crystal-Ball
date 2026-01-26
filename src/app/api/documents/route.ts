@@ -97,9 +97,6 @@ export async function POST(request: NextRequest) {
 
       try {
         await uploadChunk(chunkName, buffer);
-        console.log(
-          `Upload ${uploadId}: Chunk ${parseInt(chunkIndex) + 1}/${totalChunks} uploaded successfully`,
-        );
       } catch (uploadError) {
         console.error(`Upload ${uploadId}: Failed to upload chunk ${chunkIndex}:`, uploadError);
         return NextResponse.json({ error: "Failed to upload chunk" }, { status: 500 });
@@ -110,8 +107,6 @@ export async function POST(request: NextRequest) {
         const chunks = await listChunks(uploadId);
         const total = parseInt(totalChunks);
 
-        console.log(`Upload ${uploadId}: Currently have ${chunks.length}/${total} chunks`);
-
         if (chunks.length === total) {
           // Use a lock file to prevent multiple pods from processing the same upload
           const lockName = `${uploadId}/processing.lock`;
@@ -119,12 +114,8 @@ export async function POST(request: NextRequest) {
           try {
             // Try to create a lock file - this will fail if it already exists
             await uploadChunk(lockName, Buffer.from(new Date().toISOString()));
-            console.log(`Upload ${uploadId}: Lock acquired, proceeding with reassembly`);
           } catch {
             // Lock already exists, another pod is processing this upload
-            console.log(
-              `Upload ${uploadId}: Lock exists, another pod is processing. Returning success.`,
-            );
             return NextResponse.json(
               { message: `Upload being processed by another pod` },
               { status: 202 },
@@ -133,16 +124,10 @@ export async function POST(request: NextRequest) {
 
           // All chunks received, reassemble file using streaming
           try {
-            console.log(`Upload ${uploadId}: All ${total} chunks received, starting reassembly...`);
-
             // Use streaming reassembly to avoid loading entire file into memory
             const { objectPath: pdfUrl, fileSize: totalFileSize } = await reassembleChunksStreaming(
               uploadId,
               file.name,
-            );
-
-            console.log(
-              `Upload ${uploadId}: Reassembly complete (${totalFileSize} bytes), creating database record...`,
             );
 
             // Create database record
@@ -159,12 +144,8 @@ export async function POST(request: NextRequest) {
 
             await db.insert(document).values(newDocument);
 
-            console.log(`Upload ${uploadId}: Database record created, cleaning up chunks...`);
-
             // Clean up temp chunks
             await deleteChunks(uploadId);
-
-            console.log(`Upload ${uploadId}: Upload complete!`);
 
             return NextResponse.json(newDocument, { status: 201 });
           } catch (assemblyError) {

@@ -44,6 +44,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Document {
   id: string;
@@ -444,6 +445,18 @@ export default function DocumentsPage() {
     });
   };
 
+  const formatFullDateTime = (dateString: string): string => {
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    });
+  };
+
   return (
     <div className="min-h-[calc(100vh-65px)] bg-background">
       <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -673,7 +686,16 @@ export default function DocumentsPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {formatDate(doc.createdAt)}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger>
+                                <span className="cursor-help">{formatDate(doc.createdAt)}</span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{formatFullDateTime(doc.createdAt)}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2 justify-end items-center">

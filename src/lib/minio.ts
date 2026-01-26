@@ -416,8 +416,6 @@ export async function deleteChunks(uploadId: string): Promise<void> {
     for (const filePath of filesToDelete) {
       await minioClient.removeObject(BUCKET_NAME, filePath);
     }
-
-    console.log(`Deleted ${filesToDelete.length} files for upload ${uploadId}`);
   } catch (error) {
     console.error(`Error deleting chunks for upload ${uploadId}:`, error);
     throw error;
