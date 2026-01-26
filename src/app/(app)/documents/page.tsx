@@ -157,7 +157,7 @@ export default function DocumentsPage() {
   ) => {
     setUploading(true);
     try {
-      const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB chunks
+      const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
       const file = data.file;
       const fileSize = file.size;
 
