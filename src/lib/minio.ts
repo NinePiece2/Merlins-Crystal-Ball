@@ -400,13 +400,96 @@ export async function listChunks(uploadId: string): Promise<string[]> {
  */
 export async function deleteChunks(uploadId: string): Promise<void> {
   try {
-    const chunks = await listChunks(uploadId);
-    for (const chunk of chunks) {
-      const fullPath = `chunks/${uploadId}/${chunk}`;
-      await minioClient.removeObject(BUCKET_NAME, fullPath);
+    // List all files under the upload directory (chunks + lock file)
+    const stream = minioClient.listObjects(BUCKET_NAME, `chunks/${uploadId}/`, false);
+    const filesToDelete: string[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (obj: { name: string }) => {
+        filesToDelete.push(obj.name);
+      });
+      stream.on("error", reject);
+      stream.on("end", () => resolve());
+    });
+
+    // Delete all files (chunks and lock)
+    for (const filePath of filesToDelete) {
+      await minioClient.removeObject(BUCKET_NAME, filePath);
     }
+
+    console.log(`Deleted ${filesToDelete.length} files for upload ${uploadId}`);
   } catch (error) {
     console.error(`Error deleting chunks for upload ${uploadId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Reassemble chunks into a complete file using streaming to avoid memory issues
+ * This is more memory efficient than loading all chunks at once
+ * @param uploadId - The upload ID
+ * @param fileName - The name of the final file
+ * @returns Object with the path in MinIO where the file was saved and total file size
+ */
+export async function reassembleChunksStreaming(
+  uploadId: string,
+  fileName: string,
+): Promise<{ objectPath: string; fileSize: number }> {
+  const timestamp = Date.now();
+  const objectPath = `documents/${timestamp}-${fileName}`;
+
+  try {
+    // Get sorted list of chunk names
+    const chunks = await listChunks(uploadId);
+    const sortedChunkNames = chunks
+      .map((name) => ({
+        index: parseInt(name.split("-")[1]),
+        name,
+      }))
+      .sort((a, b) => a.index - b.index)
+      .map((c) => c.name);
+
+    // Create a PassThrough stream to pipe chunks through
+    const { PassThrough } = await import("stream");
+    const outputStream = new PassThrough();
+
+    // Track total size for MinIO metadata
+    let totalSize = 0;
+
+    // Start the upload to MinIO (it will consume from the stream)
+    const uploadPromise = minioClient.putObject(BUCKET_NAME, objectPath, outputStream as Readable);
+
+    // Stream chunks one by one
+    (async () => {
+      try {
+        for (const chunkName of sortedChunkNames) {
+          const fullPath = `chunks/${uploadId}/${chunkName}`;
+          const chunkStream = await minioClient.getObject(BUCKET_NAME, fullPath);
+
+          // Pipe this chunk into the output stream
+          await new Promise<void>((resolve, reject) => {
+            chunkStream.on("data", (chunk: Buffer) => {
+              totalSize += chunk.length;
+              outputStream.write(chunk);
+            });
+            chunkStream.on("error", reject);
+            chunkStream.on("end", resolve);
+          });
+        }
+
+        // Signal that we're done writing
+        outputStream.end();
+      } catch (error) {
+        outputStream.destroy(error as Error);
+      }
+    })();
+
+    // Wait for the upload to complete
+    await uploadPromise;
+
+    return { objectPath, fileSize: totalSize };
+  } catch (error) {
+    console.error(`Error reassembling chunks for upload ${uploadId}:`, error);
     throw error;
   }
 }

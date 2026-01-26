@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { document, user } from "@/lib/db/schema";
-import { uploadDocument, uploadChunk, downloadChunk, listChunks, deleteChunks } from "@/lib/minio";
+import {
+  uploadDocument,
+  uploadChunk,
+  listChunks,
+  deleteChunks,
+  reassembleChunksStreaming,
+} from "@/lib/minio";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 
@@ -91,6 +97,9 @@ export async function POST(request: NextRequest) {
 
       try {
         await uploadChunk(chunkName, buffer);
+        console.log(
+          `Upload ${uploadId}: Chunk ${parseInt(chunkIndex) + 1}/${totalChunks} uploaded successfully`,
+        );
       } catch (uploadError) {
         console.error(`Upload ${uploadId}: Failed to upload chunk ${chunkIndex}:`, uploadError);
         return NextResponse.json({ error: "Failed to upload chunk" }, { status: 500 });
@@ -101,40 +110,40 @@ export async function POST(request: NextRequest) {
         const chunks = await listChunks(uploadId);
         const total = parseInt(totalChunks);
 
+        console.log(`Upload ${uploadId}: Currently have ${chunks.length}/${total} chunks`);
+
         if (chunks.length === total) {
-          // All chunks received, reassemble file
+          // Use a lock file to prevent multiple pods from processing the same upload
+          const lockName = `${uploadId}/processing.lock`;
+
           try {
-            // Sort chunks numerically to ensure correct order
-            const sortedChunkNames = chunks
-              .map((name) => ({
-                index: parseInt(name.split("-")[1]),
-                name,
-              }))
-              .sort((a, b) => a.index - b.index)
-              .map((c) => c.name);
+            // Try to create a lock file - this will fail if it already exists
+            await uploadChunk(lockName, Buffer.from(new Date().toISOString()));
+            console.log(`Upload ${uploadId}: Lock acquired, proceeding with reassembly`);
+          } catch {
+            // Lock already exists, another pod is processing this upload
+            console.log(
+              `Upload ${uploadId}: Lock exists, another pod is processing. Returning success.`,
+            );
+            return NextResponse.json(
+              { message: `Upload being processed by another pod` },
+              { status: 202 },
+            );
+          }
 
-            // Download and concatenate chunks sequentially to manage memory
-            const sortedChunks: Buffer[] = [];
-            for (const chunkName of sortedChunkNames) {
-              const chunkBuffer = await downloadChunk(`${uploadId}/${chunkName}`);
-              sortedChunks.push(chunkBuffer);
-            }
+          // All chunks received, reassemble file using streaming
+          try {
+            console.log(`Upload ${uploadId}: All ${total} chunks received, starting reassembly...`);
 
-            const completeBuffer = Buffer.concat(sortedChunks);
+            // Use streaming reassembly to avoid loading entire file into memory
+            const { objectPath: pdfUrl, fileSize: totalFileSize } = await reassembleChunksStreaming(
+              uploadId,
+              file.name,
+            );
 
-            // Validate complete file size
-            const fileSizeMB = completeBuffer.length / (1024 * 1024);
-            if (fileSizeMB > MAX_FILE_SIZE_MB) {
-              // Clean up chunks
-              await deleteChunks(uploadId);
-              return NextResponse.json(
-                { error: `File size must be less than ${MAX_FILE_SIZE_MB}MB` },
-                { status: 400 },
-              );
-            }
-
-            // Upload to MinIO
-            const pdfUrl = await uploadDocument(file.name, completeBuffer, completeBuffer.length);
+            console.log(
+              `Upload ${uploadId}: Reassembly complete (${totalFileSize} bytes), creating database record...`,
+            );
 
             // Create database record
             const docId = nanoid();
@@ -143,15 +152,19 @@ export async function POST(request: NextRequest) {
               title,
               description,
               fileName: file.name,
-              fileSize: completeBuffer.length,
+              fileSize: totalFileSize,
               pdfUrl,
               uploadedBy: session.user.id,
             };
 
             await db.insert(document).values(newDocument);
 
+            console.log(`Upload ${uploadId}: Database record created, cleaning up chunks...`);
+
             // Clean up temp chunks
             await deleteChunks(uploadId);
+
+            console.log(`Upload ${uploadId}: Upload complete!`);
 
             return NextResponse.json(newDocument, { status: 201 });
           } catch (assemblyError) {
