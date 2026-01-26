@@ -105,15 +105,20 @@ export async function POST(request: NextRequest) {
           // All chunks received, reassemble file
           try {
             // Sort chunks numerically to ensure correct order
-            const sortedChunks = await Promise.all(
-              chunks
-                .map((name) => ({
-                  index: parseInt(name.split("-")[1]),
-                  name,
-                }))
-                .sort((a, b) => a.index - b.index)
-                .map((c) => downloadChunk(`${uploadId}/${c.name}`)),
-            );
+            const sortedChunkNames = chunks
+              .map((name) => ({
+                index: parseInt(name.split("-")[1]),
+                name,
+              }))
+              .sort((a, b) => a.index - b.index)
+              .map((c) => c.name);
+
+            // Download and concatenate chunks sequentially to manage memory
+            const sortedChunks: Buffer[] = [];
+            for (const chunkName of sortedChunkNames) {
+              const chunkBuffer = await downloadChunk(`${uploadId}/${chunkName}`);
+              sortedChunks.push(chunkBuffer);
+            }
 
             const completeBuffer = Buffer.concat(sortedChunks);
 
