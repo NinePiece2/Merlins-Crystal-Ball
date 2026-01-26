@@ -364,7 +364,7 @@ export default function DocumentsPage() {
             doc.description?.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
             doc.fileName.toLowerCase().includes(debouncedSearchQuery.toLowerCase()),
         )
-        .sort((a, b) => a.fileName.localeCompare(b.fileName)),
+        .sort((a, b) => a.title.localeCompare(b.title)),
     [documents, debouncedSearchQuery],
   );
 
