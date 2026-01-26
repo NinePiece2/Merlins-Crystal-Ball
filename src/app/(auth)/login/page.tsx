@@ -14,8 +14,16 @@ export default function LoginPage() {
   const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    const checkSetupStatus = async () => {
+    const checkAuth = async () => {
       try {
+        // Check if user already has a valid session
+        const profileResponse = await fetch("/api/profile");
+        if (profileResponse.ok) {
+          window.location.href = "/";
+          return;
+        }
+
+        // Check setup status
         const response = await fetch("/api/setup/status");
         const data = await response.json();
 
@@ -23,12 +31,12 @@ export default function LoginPage() {
           window.location.href = "/setup";
         }
       } catch (err) {
-        console.error("Failed to check setup status:", err);
+        console.error("Failed to check auth status:", err);
       } finally {
         setPageLoading(false);
       }
     };
-    checkSetupStatus();
+    checkAuth();
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
