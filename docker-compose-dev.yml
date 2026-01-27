@@ -1,0 +1,31 @@
+services:
+  postgress:
+    image: postgres:18
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: merlins_crystal_ball_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql
+  minio:
+    image: quay.io/minio/minio:latest
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: ["server", "--console-address", ":9001", "/data"]
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: miniopassword
+
+  # merlins-crystal-ball:
+  #   env_file: ".env.local"
+  #   build: .
+
+volumes:
+  postgres_data:
+  minio-data:
