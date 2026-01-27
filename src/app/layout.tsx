@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import UmamiAnalytics from "@/components/umami-analytics";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable}>
       <head>
+        <UmamiAnalytics />
         <script
           dangerouslySetInnerHTML={{
             __html: `

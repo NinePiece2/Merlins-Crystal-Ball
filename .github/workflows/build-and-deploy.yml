@@ -1,16 +1,54 @@
-name: Kubernetes Deploy CD
+name: Build Image and Deploy to Kubernetes
 
 on:
-  repository_dispatch:
-    types: [build-completed]
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
-concurrency:
-  group: deploy-environment
-  cancel-in-progress: false # Prevents new deployments from canceling an ongoing one
-
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{github.actor}}
+          password: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Get current time
+        id: current_time_step
+        run: echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ghcr.io/ninepiece2/merlins-crystal-ball:latest
+          build-args: |
+            BUILD_DATE=${{ steps.current_time_step.outputs.time }}
+            VCS_REF=${{ github.sha }}
+            NEXT_PUBLIC_APP_URL=https://merlins-crystal-ball.romitsagu.com
+            NEXT_PUBLIC_UMAMI_WEBSITE_ID=${{ secrets.NEXT_PUBLIC_UMAMI_WEBSITE_ID }}
+            NEXT_PUBLIC_UMAMI_URL=${{ secrets.NEXT_PUBLIC_UMAMI_URL }}
+
   deploy:
+    needs: build
+    concurrency:
+      group: deploy-environment
+      cancel-in-progress: false # Prevents new deployments from canceling an ongoing one
     runs-on: self-hosted
     env:
       KUBECONFIG: /root/.kube/config
