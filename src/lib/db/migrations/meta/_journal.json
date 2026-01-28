@@ -15,6 +15,13 @@
       "when": 1769335777890,
       "tag": "0001_great_skin",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1769627292844,
+      "tag": "0002_skinny_sumo",
+      "breakpoints": true
     }
   ]
 }

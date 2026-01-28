@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +16,14 @@ import {
 } from "@/components/ui/select";
 import { AlertCircle, Shield, Zap, Heart, Eye, Download } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
 import { CharacterSheetViewerDialog } from "@/components/character-sheet-viewer-dialog";
 
 export default function CampaignDetailPage({
@@ -38,45 +46,83 @@ export default function CampaignDetailPage({
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [selectedCharacterName, setSelectedCharacterName] = useState<string>("");
+  const [visibleSections, setVisibleSections] = useState<Set<string>>(
+    new Set(["abilityScores", "resistances", "senses"]),
+  );
+
+  const availableSections = [
+    { id: "abilityScores", label: "Ability Scores" },
+    { id: "resistances", label: "Resistances/Immunities" },
+    { id: "senses", label: "Senses & Special Abilities" },
+  ];
+
+  const toggleSection = (sectionId: string) => {
+    const newSections = new Set(visibleSections);
+    if (newSections.has(sectionId)) {
+      newSections.delete(sectionId);
+    } else {
+      newSections.add(sectionId);
+    }
+    setVisibleSections(newSections);
+  };
+
+  const saveSectionPreference = async (sections: Set<string>) => {
+    if (!campaignId) return;
+    try {
+      await fetch(`/api/campaigns/${campaignId}/preference`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibleSections: Array.from(sections) }),
+      });
+    } catch (error) {
+      console.error("Error saving section preference:", error);
+    }
+  };
 
   useEffect(() => {
     params.then((p) => setCampaignId(p.campaignId));
   }, [params]);
 
-  const fetchCampaign = useCallback(async () => {
+  useEffect(() => {
     if (!campaignId) return;
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/campaigns/${campaignId}`);
-      if (!response.ok) throw new Error("Failed to fetch campaign");
-      const data = await response.json();
-      setCampaign(data);
-    } catch (error) {
-      console.error("Error fetching campaign:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [campaignId]);
 
-  const fetchPreference = useCallback(async () => {
-    if (!campaignId) return;
-    try {
-      const response = await fetch(`/api/campaigns/${campaignId}/preference`);
-      if (response.ok) {
+    const fetchCampaign = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/campaigns/${campaignId}`);
+        if (!response.ok) throw new Error("Failed to fetch campaign");
         const data = await response.json();
-        setSelectedLevel(data.selectedLevel || 1);
+        setCampaign(data);
+      } catch (error) {
+        console.error("Error fetching campaign:", error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error fetching preference:", error);
-    }
+    };
+
+    const fetchPreference = async () => {
+      try {
+        const response = await fetch(`/api/campaigns/${campaignId}/preference`);
+        if (response.ok) {
+          const data = await response.json();
+          setSelectedLevel(data.selectedLevel || 1);
+          if (data.visibleSections && Array.isArray(data.visibleSections)) {
+            setVisibleSections(new Set(data.visibleSections));
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching preference:", error);
+      }
+    };
+
+    fetchCampaign();
+    fetchPreference();
   }, [campaignId]);
 
   useEffect(() => {
-    if (campaignId) {
-      fetchCampaign();
-      fetchPreference();
-    }
-  }, [campaignId, fetchCampaign, fetchPreference]);
+    saveSectionPreference(visibleSections);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleSections, campaignId]);
 
   const handleLevelChange = async (newLevel: number) => {
     setSelectedLevel(newLevel);
@@ -154,32 +200,62 @@ export default function CampaignDetailPage({
           </Button> */}
         </div>
 
-        {/* Level Selector */}
-        <Card className="p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div>
-              <h2 className="font-semibold">Select Character Level</h2>
-              <p className="text-sm text-muted-foreground">
-                View party members at a specific level
-              </p>
+        {/* Level Selector and Section Filter */}
+        <Card className="p-6 overflow-visible">
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="flex-shrink-0">
+                <h2 className="font-semibold text-base">Select Character Level</h2>
+                <p className="text-sm text-muted-foreground">
+                  View party members at a specific level
+                </p>
+              </div>
+              <Select
+                value={selectedLevel.toString()}
+                onValueChange={(value) => value && handleLevelChange(parseInt(value, 10))}
+              >
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {levelArray.map((level) => (
+                      <SelectItem key={level} value={level.toString()}>
+                        Level {level}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
-            <Select
-              value={selectedLevel.toString()}
-              onValueChange={(value) => value && handleLevelChange(parseInt(value, 10))}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {levelArray.map((level) => (
-                    <SelectItem key={level} value={level.toString()}>
-                      Level {level}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+
+            {/* Section Visibility Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 flex-shrink-0">
+              <div className="flex-shrink-0">
+                <h3 className="font-semibold text-base">Display Sections</h3>
+                <p className="text-sm text-muted-foreground">Customize card content visibility</p>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="bg-muted hover:bg-muted/80 border border-border text-foreground hover:text-foreground whitespace-nowrap px-4 py-2.5 rounded-md text-sm transition-colors cursor-pointer w-full sm:w-auto font-medium">
+                  {visibleSections.size} section{visibleSections.size !== 1 ? "s" : ""} selected
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Customize Character Cards</DropdownMenuLabel>
+                    {availableSections.map((section) => (
+                      <DropdownMenuCheckboxItem
+                        key={section.id}
+                        checked={visibleSections.has(section.id)}
+                        onCheckedChange={() => toggleSection(section.id)}
+                        className="text-sm"
+                      >
+                        {section.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </Card>
 
@@ -194,7 +270,10 @@ export default function CampaignDetailPage({
           ) : (
             <>
               {partAtLevel.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div
+                  className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 auto-rows-max"
+                  style={{ gridAutoRows: "1fr" }}
+                >
                   {partAtLevel.map(
                     (member: {
                       characterId: string;
@@ -220,7 +299,7 @@ export default function CampaignDetailPage({
                       return (
                         <Card
                           key={member.characterId}
-                          className="p-6 bg-linear-to-br from-amber-950 via-slate-900 to-slate-800 border-amber-700/50 text-white hover:border-amber-700 transition-colors"
+                          className="p-6 bg-linear-to-br from-amber-950 via-slate-900 to-slate-800 border-amber-700/50 text-white hover:border-amber-700 transition-colors flex flex-col h-full"
                         >
                           {/* Header with Avatar */}
                           <div className="flex justify-between items-start mb-4 pb-4 border-b border-amber-700/30 gap-4">
@@ -257,7 +336,7 @@ export default function CampaignDetailPage({
                           </div>
 
                           {hasData ? (
-                            <div className="space-y-3">
+                            <div className="space-y-3 flex-1">
                               {/* Core Stats Row */}
                               <div className="grid grid-cols-3 gap-2">
                                 {/* HP */}
@@ -322,29 +401,30 @@ export default function CampaignDetailPage({
                               </div>
 
                               {/* Ability Scores */}
-                              {extracted.strength ||
-                              extracted.dexterity ||
-                              extracted.constitution ||
-                              extracted.intelligence ||
-                              extracted.wisdom ||
-                              extracted.charisma ? (
+                              {visibleSections.has("abilityScores") &&
+                              typeof extracted.abilityScores === "object" &&
+                              extracted.abilityScores !== null &&
+                              Object.keys(extracted.abilityScores).length > 0 ? (
                                 <div className="bg-slate-700/40 rounded p-3 border border-slate-600/50">
                                   <div className="text-xs font-semibold text-amber-200 mb-2">
                                     ABILITY SCORES
                                   </div>
                                   <div className="grid grid-cols-3 gap-2 text-xs">
-                                    {(
-                                      [
-                                        ["STR", extracted.strength] as const,
-                                        ["DEX", extracted.dexterity] as const,
-                                        ["CON", extracted.constitution] as const,
-                                        ["INT", extracted.intelligence] as const,
-                                        ["WIS", extracted.wisdom] as const,
-                                        ["CHA", extracted.charisma] as const,
-                                      ] as const
-                                    ).map(([abbr, score]) =>
-                                      score ? (
-                                        <div key={abbr} className="text-center">
+                                    {Object.entries(
+                                      extracted.abilityScores as Record<string, unknown>,
+                                    ).map(([ability, score]) => {
+                                      const abbr =
+                                        {
+                                          strength: "STR",
+                                          dexterity: "DEX",
+                                          constitution: "CON",
+                                          intelligence: "INT",
+                                          wisdom: "WIS",
+                                          charisma: "CHA",
+                                        }[ability] || ability.toUpperCase().substring(0, 3);
+
+                                      return score ? (
+                                        <div key={ability} className="text-center">
                                           <div className="text-slate-300">{abbr}</div>
                                           <div className="font-bold text-amber-100">
                                             {toNum(score)}
@@ -354,32 +434,33 @@ export default function CampaignDetailPage({
                                             {getMod(score)}
                                           </div>
                                         </div>
-                                      ) : null,
-                                    )}
+                                      ) : null;
+                                    })}
                                   </div>
                                 </div>
                               ) : null}
 
                               {/* Resistances/Immunities */}
-                              {extracted.resistances || extracted.immunities ? (
+                              {visibleSections.has("resistances") &&
+                              (extracted.damageResistances || extracted.damageImmunities) ? (
                                 <div className="bg-slate-700/40 rounded p-3 border border-slate-600/50 text-xs space-y-1">
-                                  {extracted.resistances ? (
+                                  {extracted.damageResistances ? (
                                     <div>
                                       <span className="text-amber-200 font-semibold">
                                         Resistances:
                                       </span>
                                       <div className="text-slate-300">
-                                        {String(extracted.resistances)}
+                                        {String(extracted.damageResistances)}
                                       </div>
                                     </div>
                                   ) : null}
-                                  {extracted.immunities ? (
+                                  {extracted.damageImmunities ? (
                                     <div>
                                       <span className="text-amber-200 font-semibold">
                                         Immunities:
                                       </span>
                                       <div className="text-slate-300">
-                                        {String(extracted.immunities)}
+                                        {String(extracted.damageImmunities)}
                                       </div>
                                     </div>
                                   ) : null}
@@ -387,10 +468,11 @@ export default function CampaignDetailPage({
                               ) : null}
 
                               {/* Senses and Special Abilities */}
-                              {extracted.senses ||
-                              extracted.languages ||
-                              extracted.specialAbilities ||
-                              extracted.damageResistances ? (
+                              {visibleSections.has("senses") &&
+                              (extracted.senses ||
+                                extracted.languages ||
+                                extracted.specialAbilities ||
+                                extracted.damageResistances) ? (
                                 <div className="bg-slate-700/40 rounded p-3 border border-slate-600/50 text-xs space-y-1">
                                   {extracted.senses ? (
                                     <div>
@@ -403,16 +485,6 @@ export default function CampaignDetailPage({
                                               .map((value) => String(value))
                                               .join(", ")
                                           : String(extracted.senses)}
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                  {extracted.damageResistances ? (
-                                    <div>
-                                      <span className="text-amber-200 font-semibold">
-                                        Damage Resistances:
-                                      </span>
-                                      <div className="text-slate-300">
-                                        {String(extracted.damageResistances)}
                                       </div>
                                     </div>
                                   ) : null}

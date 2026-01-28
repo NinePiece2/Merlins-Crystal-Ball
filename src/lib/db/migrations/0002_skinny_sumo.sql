@@ -1,0 +1,1 @@
+ALTER TABLE "user_campaign_preference" ADD COLUMN "visible_sections" jsonb DEFAULT '[]'::jsonb;

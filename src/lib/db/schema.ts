@@ -135,6 +135,7 @@ export const userCampaignPreference = pgTable(
       .notNull()
       .references(() => campaign.id, { onDelete: "cascade" }),
     selectedLevel: integer("selected_level").notNull().default(1),
+    visibleSections: jsonb("visible_sections").default([]),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [primaryKey({ columns: [table.userId, table.campaignId] })],

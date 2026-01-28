@@ -42,7 +42,7 @@ export async function GET(
     }
 
     // Return default if not found
-    return NextResponse.json({ selectedLevel: 1 });
+    return NextResponse.json({ selectedLevel: 1, visibleSections: [] });
   } catch (error) {
     console.error("Error fetching preference:", error);
     return NextResponse.json({ error: "Failed to fetch preference" }, { status: 500 });
@@ -65,9 +65,10 @@ export async function PATCH(
 
     const { campaignId } = await params;
     const body = await request.json();
-    const { selectedLevel } = body;
+    const { selectedLevel, visibleSections } = body;
 
-    if (!selectedLevel || selectedLevel < 1 || selectedLevel > 20) {
+    // Validate selectedLevel if provided
+    if (selectedLevel !== undefined && (selectedLevel < 1 || selectedLevel > 20)) {
       return NextResponse.json({ error: "Invalid level (must be 1-20)" }, { status: 400 });
     }
 
@@ -90,13 +91,18 @@ export async function PATCH(
       );
 
     if (existing && existing.length > 0) {
-      // Update existing
+      // Update existing - only update fields that are provided
+      const updateData: {
+        updatedAt: Date;
+        selectedLevel?: number;
+        visibleSections?: string[];
+      } = { updatedAt: new Date() };
+      if (selectedLevel !== undefined) updateData.selectedLevel = selectedLevel;
+      if (visibleSections !== undefined) updateData.visibleSections = visibleSections;
+
       await db
         .update(userCampaignPreference)
-        .set({
-          selectedLevel,
-          updatedAt: new Date(),
-        })
+        .set(updateData)
         .where(
           and(
             eq(userCampaignPreference.userId, session.user.id),
@@ -108,12 +114,13 @@ export async function PATCH(
       await db.insert(userCampaignPreference).values({
         userId: session.user.id,
         campaignId,
-        selectedLevel,
+        selectedLevel: selectedLevel || 1,
+        visibleSections: visibleSections || [],
         updatedAt: new Date(),
       });
     }
 
-    return NextResponse.json({ success: true, selectedLevel });
+    return NextResponse.json({ success: true, selectedLevel, visibleSections });
   } catch (error) {
     console.error("Error updating preference:", error);
     return NextResponse.json({ error: "Failed to update preference" }, { status: 500 });
