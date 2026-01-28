@@ -34,8 +34,10 @@ import {
   Upload as UploadIcon,
   Search,
   Loader2,
+  X,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import {
@@ -61,26 +63,43 @@ interface SearchInputProps {
   searchQuery: string;
   isSearching: boolean;
   onChange: (value: string) => void;
+  onClear: () => void;
 }
 
 const SearchInput = memo(function SearchInput({
   searchQuery,
   isSearching,
   onChange,
+  onClear,
 }: SearchInputProps) {
   return (
-    <div className="flex-1 min-w-[250px] relative">
-      {isSearching ? (
-        <Loader2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground animate-spin" />
-      ) : (
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-      )}
-      <Input
-        placeholder="Search documents by title, description, or filename..."
-        value={searchQuery}
-        onChange={(e) => onChange(e.target.value)}
-        className="pl-10"
-      />
+    <div className="flex-1 min-w-[250px]">
+      <InputGroup>
+        <InputGroupAddon align="inline-start">
+          {isSearching ? (
+            <Loader2 className="w-4 h-4 text-muted-foreground animate-spin" />
+          ) : (
+            <Search className="w-4 h-4 text-muted-foreground" />
+          )}
+        </InputGroupAddon>
+        <InputGroupInput
+          placeholder="Search documents by title, description, or filename..."
+          value={searchQuery}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {searchQuery && (
+          <InputGroupAddon align="inline-end">
+            <Button
+              onClick={onClear}
+              className="w-4 h-4 text-muted-foreground hover:text-foreground transition-colors"
+              variant="ghost"
+              aria-label="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </InputGroupAddon>
+        )}
+      </InputGroup>
     </div>
   );
 });
@@ -355,6 +374,10 @@ export default function DocumentsPage() {
     setSearchQuery(value);
   }, []);
 
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery("");
+  }, []);
+
   const filteredDocuments = useMemo(
     () =>
       documents
@@ -513,6 +536,7 @@ export default function DocumentsPage() {
                 searchQuery={searchQuery}
                 isSearching={isPending2}
                 onChange={handleSearchChange}
+                onClear={handleClearSearch}
               />
               {selectedDocuments.size > 0 && (
                 <div className="flex gap-2 items-center">

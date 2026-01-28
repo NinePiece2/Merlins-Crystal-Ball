@@ -6,14 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { AlertCircle, Shield, Zap, Heart, Eye, Download } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -191,52 +183,48 @@ export default function CampaignDetailPage({
               {campaign.party.length} character{campaign.party.length !== 1 ? "s" : ""} in party
             </p>
           </div>
-          {/* <Button
-            onClick={() => setShowAddCharacter(!showAddCharacter)}
-            className="gap-2"
-            size="lg"
-          >
-            <Plus className="w-5 h-5" /> Add Character
-          </Button> */}
         </div>
 
         {/* Level Selector and Section Filter */}
         <Card className="p-6 overflow-visible">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
             <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="flex-shrink-0">
+              <div className="shrink-0">
                 <h2 className="font-semibold text-base">Select Character Level</h2>
                 <p className="text-sm text-muted-foreground">
                   View party members at a specific level
                 </p>
               </div>
-              <Select
-                value={selectedLevel.toString()}
-                onValueChange={(value) => value && handleLevelChange(parseInt(value, 10))}
-              >
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="bg-muted hover:bg-muted/80 border border-border text-foreground hover:text-foreground whitespace-nowrap px-4 py-2 rounded-md text-sm transition-colors cursor-pointer w-full sm:w-45 font-medium">
+                  Level {selectedLevel}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>Select Character Level</DropdownMenuLabel>
                     {levelArray.map((level) => (
-                      <SelectItem key={level} value={level.toString()}>
+                      <DropdownMenuCheckboxItem
+                        key={level}
+                        checked={selectedLevel === level}
+                        onCheckedChange={() => handleLevelChange(level)}
+                        className="text-sm"
+                      >
                         Level {level}
-                      </SelectItem>
+                      </DropdownMenuCheckboxItem>
                     ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {/* Section Visibility Toggle */}
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4 flex-shrink-0">
-              <div className="flex-shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4 shrink-0">
+              <div className="shrink-0">
                 <h3 className="font-semibold text-base">Display Sections</h3>
                 <p className="text-sm text-muted-foreground">Customize card content visibility</p>
               </div>
               <DropdownMenu>
-                <DropdownMenuTrigger className="bg-muted hover:bg-muted/80 border border-border text-foreground hover:text-foreground whitespace-nowrap px-4 py-2.5 rounded-md text-sm transition-colors cursor-pointer w-full sm:w-auto font-medium">
+                <DropdownMenuTrigger className="bg-muted hover:bg-muted/80 border border-border text-foreground hover:text-foreground whitespace-nowrap px-4 py-2 rounded-md text-sm transition-colors cursor-pointer w-full sm:w-45 font-medium">
                   {visibleSections.size} section{visibleSections.size !== 1 ? "s" : ""} selected
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-64">
