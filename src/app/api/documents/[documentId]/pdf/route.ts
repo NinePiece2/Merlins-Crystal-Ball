@@ -8,6 +8,7 @@ import { PDFDocument } from "pdf-lib";
 /**
  * GET /api/documents/[documentId]/pdf
  * Stream a document PDF from MinIO or return HTML viewer with custom title
+ * Optimized for large files (100-600MB) with minimal memory usage
  */
 export async function GET(
   request: NextRequest,
@@ -29,75 +30,174 @@ export async function GET(
     }
 
     const documentTitle = doc[0].title || doc[0].fileName.replace(".pdf", "");
+    const fileSize = doc[0].fileSize;
 
     // Encode filename for HTTP headers (RFC 5987)
-    // Remove or replace problematic characters for ASCII fallback
     const safeAsciiFilename =
       documentTitle
-        .replace(/[^\x20-\x7E]/g, "") // Remove non-ASCII characters
-        .replace(/["\\]/g, "") // Remove quotes and backslashes
+        .replace(/[^\x20-\x7E]/g, "")
+        .replace(/["\\]/g, "")
         .trim() || "document";
 
     const cleanFileName = `${safeAsciiFilename}.pdf`;
-
-    // For modern browsers, use RFC 5987 encoding with UTF-8
     const encodedFilename = encodeURIComponent(documentTitle);
 
-    // Check if this is a raw PDF request (for embedding or direct download)
+    // Check request type
     const raw = request.nextUrl.searchParams.get("raw") === "true";
     const directDownload = request.nextUrl.searchParams.get("direct") === "true";
 
-    // For embedded views (like in dialogs), serve the PDF with proper Content-Disposition
-    // This way the browser's PDF viewer will show the correct filename
     if (raw || directDownload) {
-      // Stream the raw PDF file
       const { default: minioClient } = await import("@/lib/minio");
       const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
 
-      const stream = await minioClient.getObject(BUCKET_NAME, doc[0].pdfUrl);
+      // Check if client supports range requests
+      const range = request.headers.get("range");
 
-      // Size threshold: only modify PDFs smaller than 50MB to avoid performance issues
-      const MAX_SIZE_FOR_METADATA_MODIFICATION = 50 * 1024 * 1024; // 50MB
-      const shouldModifyMetadata = doc[0].fileSize < MAX_SIZE_FOR_METADATA_MODIFICATION;
+      // For large files (>50MB), optimize for streaming performance
+      const LARGE_FILE_THRESHOLD = 50 * 1024 * 1024; // 50MB
+      const isLargeFile = fileSize > LARGE_FILE_THRESHOLD;
 
-      if (shouldModifyMetadata) {
-        // Download the entire PDF to modify metadata (only for small files)
-        const chunks: Buffer[] = [];
+      // Handle range requests for large files (enables streaming/seeking in PDF viewers)
+      if (range && isLargeFile) {
+        const parts = range.replace(/bytes=/, "").split("-");
+        const start = parseInt(parts[0], 10) || 0;
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunksize = end - start + 1;
 
-        await new Promise<void>((resolve, reject) => {
-          stream.on("data", (chunk: Buffer) => {
-            chunks.push(chunk);
-          });
-          stream.on("end", resolve);
-          stream.on("error", reject);
-        });
-
-        const pdfBuffer = Buffer.concat(chunks);
-
-        // Try to load and modify the PDF metadata
-        let modifiedPdfBytes: Uint8Array;
-        try {
-          // Load the PDF with ignoreEncryption to handle encrypted PDFs
-          const pdfDoc = await PDFDocument.load(pdfBuffer, {
-            ignoreEncryption: true,
-          });
-
-          // Set the title metadata
-          pdfDoc.setTitle(documentTitle);
-
-          // Save the modified PDF
-          modifiedPdfBytes = await pdfDoc.save();
-        } catch (pdfError) {
-          // If PDF modification fails, use the original PDF
-          console.warn(`Could not modify PDF metadata for ${documentId}:`, pdfError);
-          modifiedPdfBytes = new Uint8Array(pdfBuffer);
+        // Validate range request
+        if (start >= fileSize || end >= fileSize || start > end) {
+          return NextResponse.json({ error: "Invalid range" }, { status: 416 });
         }
 
-        // Create a ReadableStream from the modified PDF
+        try {
+          // Use MinIO's getPartialObject for efficient range requests
+          const stream = await minioClient.getPartialObject(
+            BUCKET_NAME,
+            doc[0].pdfUrl,
+            start,
+            chunksize,
+          );
+
+          const readableStream = new ReadableStream({
+            start(controller) {
+              stream.on("data", (chunk: Buffer) => {
+                controller.enqueue(new Uint8Array(chunk));
+              });
+              stream.on("end", () => {
+                controller.close();
+              });
+              stream.on("error", (error) => {
+                console.error("Stream error:", error);
+                controller.error(error);
+              });
+            },
+            cancel() {
+              stream.destroy();
+            },
+          });
+
+          return new NextResponse(readableStream, {
+            status: 206, // Partial Content
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Length": chunksize.toString(),
+              "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+              "Accept-Ranges": "bytes",
+              "Content-Disposition": directDownload
+                ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
+                : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
+              "Cache-Control": "private, max-age=3600",
+            },
+          });
+        } catch (rangeError) {
+          console.warn("Range request failed, falling back to full stream:", rangeError);
+          // Fall through to regular streaming
+        }
+      }
+
+      // For small files, try metadata modification
+      if (!isLargeFile) {
+        try {
+          const stream = await minioClient.getObject(BUCKET_NAME, doc[0].pdfUrl);
+          const chunks: Buffer[] = [];
+
+          await new Promise<void>((resolve, reject) => {
+            const timeout = setTimeout(() => {
+              reject(new Error("Timeout reading PDF"));
+            }, 30000); // 30 second timeout
+
+            stream.on("data", (chunk: Buffer) => {
+              chunks.push(chunk);
+            });
+            stream.on("end", () => {
+              clearTimeout(timeout);
+              resolve();
+            });
+            stream.on("error", (error) => {
+              clearTimeout(timeout);
+              reject(error);
+            });
+          });
+
+          const pdfBuffer = Buffer.concat(chunks);
+
+          // Try to modify metadata
+          let modifiedPdfBytes: Uint8Array;
+          try {
+            const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+            pdfDoc.setTitle(documentTitle);
+            modifiedPdfBytes = await pdfDoc.save();
+          } catch (pdfError) {
+            console.warn(`Could not modify PDF metadata for ${documentId}:`, pdfError);
+            modifiedPdfBytes = new Uint8Array(pdfBuffer);
+          }
+
+          const readableStream = new ReadableStream({
+            start(controller) {
+              controller.enqueue(modifiedPdfBytes);
+              controller.close();
+            },
+          });
+
+          return new NextResponse(readableStream, {
+            status: 200,
+            headers: {
+              "Content-Type": "application/pdf",
+              "Content-Length": modifiedPdfBytes.length.toString(),
+              "Accept-Ranges": "bytes",
+              "Content-Disposition": directDownload
+                ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
+                : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
+              "Cache-Control": "private, max-age=3600",
+            },
+          });
+        } catch (error) {
+          console.warn("Small file processing failed, falling back to streaming:", error);
+          // Fall through to streaming
+        }
+      }
+
+      // Optimized streaming for large files - minimal memory usage
+      try {
+        const stream = await minioClient.getObject(BUCKET_NAME, doc[0].pdfUrl);
+
         const readableStream = new ReadableStream({
           start(controller) {
-            controller.enqueue(modifiedPdfBytes);
-            controller.close();
+            stream.on("data", (chunk: Buffer) => {
+              // Process chunks immediately without buffering
+              controller.enqueue(new Uint8Array(chunk));
+            });
+            stream.on("end", () => {
+              controller.close();
+            });
+            stream.on("error", (error) => {
+              console.error("Stream error:", error);
+              controller.error(error);
+            });
+          },
+          cancel() {
+            // Clean up resources when client disconnects
+            stream.destroy();
           },
         });
 
@@ -105,41 +205,21 @@ export async function GET(
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            // Use RFC 5987 encoding for proper Unicode support in filenames
+            "Content-Length": fileSize.toString(),
+            "Accept-Ranges": "bytes", // Enable range request support
             "Content-Disposition": directDownload
               ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
               : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
             "Cache-Control": "private, max-age=3600",
+            // Performance headers
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "SAMEORIGIN",
           },
         });
+      } catch (streamError) {
+        console.error("Streaming failed:", streamError);
+        return NextResponse.json({ error: "Failed to stream document" }, { status: 500 });
       }
-
-      // For large files, stream directly without metadata modification for better performance
-      const readableStream = new ReadableStream({
-        start(controller) {
-          stream.on("data", (chunk: Buffer) => {
-            controller.enqueue(new Uint8Array(chunk));
-          });
-          stream.on("end", () => {
-            controller.close();
-          });
-          stream.on("error", (error) => {
-            controller.error(error);
-          });
-        },
-      });
-
-      return new NextResponse(readableStream, {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          // Use RFC 5987 encoding for proper Unicode support in filenames
-          "Content-Disposition": directDownload
-            ? `attachment; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`
-            : `inline; filename="${cleanFileName}"; filename*=UTF-8''${encodedFilename}.pdf`,
-          "Cache-Control": "private, max-age=3600",
-        },
-      });
     }
 
     // For standalone views (opening in new tab), return HTML with custom title
