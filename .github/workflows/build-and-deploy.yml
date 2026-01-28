@@ -53,53 +53,6 @@ jobs:
     env:
       KUBECONFIG: /root/.kube/config
     steps:
-      - name: Check for Running Deployments
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          RUNNING_WORKFLOWS=$(gh run list --repo ${{ github.repository }} --workflow deploy.yml --status in_progress --json databaseId --jq 'length')
-          if [ "$RUNNING_WORKFLOWS" -gt 0 ]; then
-            echo "🚨 Another deployment is already running. Exiting."
-            exit 0
-          fi
-        shell: bash
-
-      - name: Checkout code
-        uses: actions/checkout@v6
-
-      - name: Wait for all builds to complete
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const checkRuns = await github.rest.checks.listForRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: context.ref,
-            });
-
-            const builds = checkRuns.data.check_runs.filter(check => check.name.includes("build"));
-
-            console.log("Waiting for all builds:", builds.map(b => b.name));
-
-            let allCompleted = false;
-            while (!allCompleted) {
-              await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10s before retrying
-
-              const updatedChecks = await github.rest.checks.listForRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: context.ref,
-              });
-
-              const updatedBuilds = updatedChecks.data.check_runs.filter(check => check.name.includes("build"));
-              allCompleted = updatedBuilds.every(b => b.status === "completed");
-
-              console.log("Current statuses:", updatedBuilds.map(b => `${b.name}: ${b.status}`));
-            }
-
-            console.log("All builds completed!");
-
       - name: Create Deployment
         id: deployment
         uses: chrnorm/deployment-action@v2
