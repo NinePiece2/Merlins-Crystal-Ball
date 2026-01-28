@@ -24,6 +24,11 @@ const CHUNK_SIZE_MB = 10; // 10MB max chunk size (Next.js body limit)
  */
 export async function GET() {
   try {
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const documents = await db.select().from(document).orderBy(document.createdAt);
 
     return NextResponse.json(documents);

@@ -14,6 +14,11 @@ export async function GET(
   { params }: { params: Promise<{ documentId: string }> },
 ) {
   try {
+    const session = await getSession();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { documentId } = await params;
 
     const doc = await db.select().from(document).where(eq(document.id, documentId));

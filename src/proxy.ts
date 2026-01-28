@@ -36,20 +36,28 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/setup", request.url));
   }
 
-  // For non-API routes, check if user is authenticated
-  if (!pathname.startsWith("/api")) {
-    try {
-      const session = await auth.api.getSession({
-        headers: request.headers,
-      });
+  // Check authentication for protected routes
+  try {
+    const session = await auth.api.getSession({
+      headers: request.headers,
+    });
 
-      if (!session) {
-        // No valid session, redirect to login
+    if (!session) {
+      if (pathname.startsWith("/api")) {
+        // No valid session for API route, return 401
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      } else {
+        // No valid session for page route, redirect to login
         return NextResponse.redirect(new URL("/login", request.url));
       }
-    } catch (error) {
-      console.error("Error checking session in middleware:", error);
-      // On error, redirect to login for safety
+    }
+  } catch (error) {
+    console.error("Error checking session in middleware:", error);
+    if (pathname.startsWith("/api")) {
+      // On error for API route, return 401 for safety
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    } else {
+      // On error for page route, redirect to login for safety
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }
