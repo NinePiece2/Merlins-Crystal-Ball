@@ -95,12 +95,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -108,19 +104,14 @@
       "compositePrimaryKeys": {
         "account_user_id_provider_id_pk": {
           "name": "account_user_id_provider_id_pk",
-          "columns": [
-            "user_id",
-            "provider_id"
-          ]
+          "columns": ["user_id", "provider_id"]
         }
       },
       "uniqueConstraints": {
         "account_id_unique": {
           "name": "account_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "policies": {},
@@ -176,12 +167,8 @@
           "name": "campaign_user_id_user_id_fk",
           "tableFrom": "campaign",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -222,12 +209,8 @@
           "name": "campaign_party_campaign_id_campaign_id_fk",
           "tableFrom": "campaign_party",
           "tableTo": "campaign",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -235,12 +218,8 @@
           "name": "campaign_party_character_id_character_id_fk",
           "tableFrom": "campaign_party",
           "tableTo": "character",
-          "columnsFrom": [
-            "character_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["character_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -248,10 +227,7 @@
       "compositePrimaryKeys": {
         "campaign_party_campaign_id_character_id_pk": {
           "name": "campaign_party_campaign_id_character_id_pk",
-          "columns": [
-            "campaign_id",
-            "character_id"
-          ]
+          "columns": ["campaign_id", "character_id"]
         }
       },
       "uniqueConstraints": {},
@@ -338,12 +314,8 @@
           "name": "character_user_id_user_id_fk",
           "tableFrom": "character",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -410,12 +382,8 @@
           "name": "character_level_character_id_character_id_fk",
           "tableFrom": "character_level",
           "tableTo": "character",
-          "columnsFrom": [
-            "character_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["character_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -449,12 +417,8 @@
           "name": "character_level_unique_character_id_character_id_fk",
           "tableFrom": "character_level_unique",
           "tableTo": "character",
-          "columnsFrom": [
-            "character_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["character_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -462,10 +426,7 @@
       "compositePrimaryKeys": {
         "character_level_unique_character_id_level_pk": {
           "name": "character_level_unique_character_id_level_pk",
-          "columns": [
-            "character_id",
-            "level"
-          ]
+          "columns": ["character_id", "level"]
         }
       },
       "uniqueConstraints": {},
@@ -579,12 +540,8 @@
           "name": "document_uploaded_by_user_id_fk",
           "tableFrom": "document",
           "tableTo": "user",
-          "columnsFrom": [
-            "uploaded_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploaded_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -656,12 +613,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -671,9 +624,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -751,9 +702,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -804,12 +753,8 @@
           "name": "user_campaign_preference_user_id_user_id_fk",
           "tableFrom": "user_campaign_preference",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -817,12 +762,8 @@
           "name": "user_campaign_preference_campaign_id_campaign_id_fk",
           "tableFrom": "user_campaign_preference",
           "tableTo": "campaign",
-          "columnsFrom": [
-            "campaign_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["campaign_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -830,10 +771,7 @@
       "compositePrimaryKeys": {
         "user_campaign_preference_user_id_campaign_id_pk": {
           "name": "user_campaign_preference_user_id_campaign_id_pk",
-          "columns": [
-            "user_id",
-            "campaign_id"
-          ]
+          "columns": ["user_id", "campaign_id"]
         }
       },
       "uniqueConstraints": {},
