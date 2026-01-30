@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Download } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 export interface CharacterSheetData {
   characterName?: string;
@@ -251,8 +251,8 @@ export function CharacterSheetDisplay({
                       : "Download character sheet"
                   }
                 >
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  View Full Sheet
                 </Button>
               </div>
             </div>

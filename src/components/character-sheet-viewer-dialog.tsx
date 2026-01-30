@@ -27,7 +27,7 @@ export function CharacterSheetViewerDialog({
 
   const handleDownload = (charId: string, charLevel: number) => {
     // Open the PDF download endpoint
-    window.location.href = `/api/characters/${charId}/levels/${charLevel}/pdf`;
+    window.open(`/api/characters/${charId}/levels/${charLevel}/pdf`, "_blank");
   };
 
   useEffect(() => {

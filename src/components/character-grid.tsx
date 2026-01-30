@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, Download, Plus, Edit, Eye } from "lucide-react";
+import { Trash2, ExternalLink, Plus, Edit, Eye } from "lucide-react";
 import { CharacterSheetViewerDialog } from "@/components/character-sheet-viewer-dialog";
 
 export interface CharacterWithLevels extends Character {
@@ -158,7 +158,7 @@ export function CharacterGrid({
                                 size="sm"
                                 onClick={() => onSelectLevel(character.id, level.level)}
                               >
-                                <Download className="w-4 h-4" />
+                                <ExternalLink className="w-4 h-4" />
                               </Button>
                               {onDeleteLevel && (
                                 <AlertDialog>
