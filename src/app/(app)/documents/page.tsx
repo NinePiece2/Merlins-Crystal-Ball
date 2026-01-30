@@ -126,6 +126,10 @@ export default function DocumentsPage() {
   const [bulkDeleteDocIds, setBulkDeleteDocIds] = useState<Set<string> | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
+  const [recentDownloads, setRecentDownloads] = useState<
+    Array<{ id: string; title: string; status: "downloading" | "complete"; timestamp: number }>
+  >([]);
 
   const isAdmin =
     session?.user &&
@@ -367,6 +371,15 @@ export default function DocumentsPage() {
   };
 
   const handleDownloadSingle = async (documentId: string, documentTitle: string) => {
+    setDownloadingDocId(documentId);
+    const toastId = toast.loading(`Preparing ${documentTitle}...`);
+
+    // Add to recent downloads
+    setRecentDownloads((prev) => [
+      { id: documentId, title: documentTitle, status: "downloading", timestamp: Date.now() },
+      ...prev.slice(0, 4), // Keep last 5
+    ]);
+
     try {
       const response = await fetch("/api/documents/download-bulk", {
         method: "POST",
@@ -382,6 +395,9 @@ export default function DocumentsPage() {
         throw new Error("Failed to download document");
       }
 
+      // Update toast to show download in progress
+      toast.loading(`Downloading ${documentTitle}...`, { id: toastId });
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -392,10 +408,26 @@ export default function DocumentsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      toast.success("Document downloaded successfully!");
+      // Update recent downloads to show complete
+      setRecentDownloads((prev) =>
+        prev.map((d) => (d.id === documentId ? { ...d, status: "complete" } : d)),
+      );
+
+      toast.success(`${documentTitle} downloaded successfully!`, {
+        id: toastId,
+        icon: <Download className="w-4 h-4" />,
+      });
+
+      // Auto-remove from recent downloads after 5 seconds
+      setTimeout(() => {
+        setRecentDownloads((prev) => prev.filter((d) => d.id !== documentId));
+      }, 5000);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download document");
+      toast.error(`Failed to download ${documentTitle}`, { id: toastId });
+      setRecentDownloads((prev) => prev.filter((d) => d.id !== documentId));
+    } finally {
+      setDownloadingDocId(null);
     }
   };
 
@@ -825,10 +857,15 @@ export default function DocumentsPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleDownloadSingle(doc.id, doc.title)}
+                                  disabled={downloadingDocId === doc.id}
                                   className="gap-1"
                                   title="Download"
                                 >
-                                  <Download className="w-4 h-4" />
+                                  {downloadingDocId === doc.id ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Download className="w-4 h-4" />
+                                  )}
                                 </Button>
                                 {isAdmin && (
                                   <>

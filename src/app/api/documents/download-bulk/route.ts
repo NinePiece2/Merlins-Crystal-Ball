@@ -9,6 +9,18 @@ import { Readable } from "stream";
 export const maxDuration = 300; // 5 minutes for large downloads
 
 /**
+ * Sanitize filename for HTTP headers - converts Unicode to ASCII-safe format
+ */
+function sanitizeFilename(filename: string): string {
+  return (
+    filename
+      .replace(/[^\x20-\x7E]/g, "") // Remove non-ASCII characters
+      .replace(/["\\]/g, "") // Remove quotes and backslashes
+      .trim() || "document"
+  );
+}
+
+/**
  * POST /api/documents/download-bulk
  * Stream multiple documents as a zip file (uncompressed for speed)
  * For single documents, streams directly without zipping
@@ -42,13 +54,15 @@ export async function POST(request: NextRequest) {
       const doc = docs[0];
       try {
         const stream = await minioClient.getObject(BUCKET_NAME, doc.pdfUrl);
-        const filename = doc.title || doc.fileName;
+        const originalFilename = doc.title || doc.fileName;
+        const safeFilename = sanitizeFilename(originalFilename);
+        const encodedFilename = encodeURIComponent(originalFilename);
 
         return new NextResponse(stream as any, {
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Content-Disposition": `attachment; filename="${safeFilename}.pdf"; filename*=UTF-8''${encodedFilename}.pdf`,
             "Cache-Control": "no-cache",
           },
         });
@@ -73,11 +87,12 @@ export async function POST(request: NextRequest) {
         // Get stream from MinIO
         const stream = await minioClient.getObject(BUCKET_NAME, doc.pdfUrl);
 
-        // Create unique filename
-        let filename = `${doc.title || doc.fileName.replace(".pdf", "")}.pdf`;
+        // Create unique filename with safe characters only
+        const baseName = sanitizeFilename(doc.title || doc.fileName.replace(".pdf", ""));
+        let filename = `${baseName}.pdf`;
         let counter = 1;
         while (usedFilenames.has(filename)) {
-          filename = `${doc.title || doc.fileName.replace(".pdf", "")}_${counter}.pdf`;
+          filename = `${baseName}_${counter}.pdf`;
           counter++;
         }
         usedFilenames.add(filename);
