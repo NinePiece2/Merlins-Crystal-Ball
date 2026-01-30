@@ -10,7 +10,8 @@ export const maxDuration = 300; // 5 minutes for large downloads
 
 /**
  * POST /api/documents/download-bulk
- * Stream multiple documents as a zip file
+ * Stream multiple documents as a zip file (uncompressed for speed)
+ * For single documents, streams directly without zipping
  */
 export async function POST(request: NextRequest) {
   try {
@@ -36,15 +37,37 @@ export async function POST(request: NextRequest) {
     const { default: minioClient } = await import("@/lib/minio");
     const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
 
-    // Create a zip archive with streaming
+    // Optimization: If only one document, stream it directly without zipping
+    if (docs.length === 1) {
+      const doc = docs[0];
+      try {
+        const stream = await minioClient.getObject(BUCKET_NAME, doc.pdfUrl);
+        const filename = doc.title || doc.fileName;
+
+        return new NextResponse(stream as any, {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `attachment; filename="${filename}"`,
+            "Cache-Control": "no-cache",
+          },
+        });
+      } catch (error) {
+        console.error(`Error streaming document ${doc.id}:`, error);
+        return NextResponse.json({ error: "Failed to download document" }, { status: 500 });
+      }
+    }
+
+    // Create a zip archive with NO compression (store mode) for maximum speed
+    // Compression uses CPU heavily and adds little value for PDFs (already compressed)
     const archive = archiver("zip", {
-      zlib: { level: 6 }, // Compression level (0-9)
+      store: true, // Store mode - no compression, maximum speed
     });
 
     // Track filenames to avoid duplicates
     const usedFilenames = new Set<string>();
 
-    // Add each document to the archive - must be done before finalizing
+    // Add each document to the archive
     for (const doc of docs) {
       try {
         // Get stream from MinIO
@@ -60,7 +83,6 @@ export async function POST(request: NextRequest) {
         usedFilenames.add(filename);
 
         // Append file to archive with streaming
-        // Note: archiver will buffer these internally until finalize() is called
         archive.append(stream as Readable, { name: filename });
       } catch (error) {
         console.error(`Error adding document ${doc.id} to archive:`, error);
@@ -68,12 +90,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Finalize the archive - this triggers the actual zip creation
-    // Don't await this, as we want to start streaming immediately
+    // Finalize the archive
     const finalizePromise = archive.finalize();
 
     // Handle any finalization errors
-    finalizePromise.catch((error) => {
+    finalizePromise.catch((error: unknown) => {
       console.error("Archive finalization error:", error);
     });
 
@@ -86,7 +107,7 @@ export async function POST(request: NextRequest) {
         archive.on("end", () => {
           controller.close();
         });
-        archive.on("error", (error) => {
+        archive.on("error", (error: unknown) => {
           console.error("Archive error:", error);
           controller.error(error);
         });

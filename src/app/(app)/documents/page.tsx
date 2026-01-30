@@ -35,6 +35,7 @@ import {
   Search,
   Loader2,
   X,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
@@ -363,6 +364,39 @@ export default function DocumentsPage() {
 
   const handleDownload = (documentId: string) => {
     window.open(`/api/documents/${documentId}/pdf`, "_blank");
+  };
+
+  const handleDownloadSingle = async (documentId: string, documentTitle: string) => {
+    try {
+      const response = await fetch("/api/documents/download-bulk", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          documentIds: [documentId],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to download document");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${documentTitle}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Document downloaded successfully!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download document");
+    }
   };
 
   const handleViewDocument = (doc: Document) => {
@@ -774,7 +808,7 @@ export default function DocumentsPage() {
                                   variant="ghost"
                                   onClick={() => handleViewDocument(doc)}
                                   className="gap-1"
-                                  title="View"
+                                  title="View in new tab"
                                 >
                                   <Eye className="w-4 h-4" />
                                 </Button>
@@ -782,6 +816,15 @@ export default function DocumentsPage() {
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => handleDownload(doc.id)}
+                                  className="gap-1"
+                                  title="Open in new tab"
+                                >
+                                  <ExternalLink className="w-4 h-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDownloadSingle(doc.id, doc.title)}
                                   className="gap-1"
                                   title="Download"
                                 >
