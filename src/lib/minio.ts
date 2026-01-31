@@ -1,12 +1,36 @@
 import { Client } from "minio";
 import { Readable } from "stream";
+import http from "http";
+import https from "https";
+
+// Create HTTP agents with connection pooling for better throughput
+const httpAgent = new http.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 30000,
+  maxSockets: 100,
+  maxFreeSockets: 10,
+});
+
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  keepAliveMsecs: 30000,
+  maxSockets: 100,
+  maxFreeSockets: 10,
+});
+
+// Set TCP_NODELAY for reduced latency
+httpAgent.on("connection", (socket) => socket.setNoDelay(true));
+httpsAgent.on("connection", (socket) => socket.setNoDelay(true));
+
+const useSSL = process.env.MINIO_USE_SSL === "true";
 
 const minioClient = new Client({
   endPoint: process.env.MINIO_ENDPOINT || "localhost",
   port: process.env.MINIO_PORT ? parseInt(process.env.MINIO_PORT) : 9000,
-  useSSL: process.env.MINIO_USE_SSL === "true",
+  useSSL,
   accessKey: process.env.MINIO_ROOT_USER || "minioadmin",
   secretKey: process.env.MINIO_ROOT_PASSWORD || "minioadmin",
+  transportAgent: useSSL ? httpsAgent : httpAgent,
 });
 
 const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";

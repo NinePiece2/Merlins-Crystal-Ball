@@ -53,15 +53,33 @@ export async function POST(request: NextRequest) {
     if (docs.length === 1) {
       const doc = docs[0];
       try {
+        // Get file size for Content-Length header (enables progress bars)
+        const stat = await minioClient.statObject(BUCKET_NAME, doc.pdfUrl);
         const stream = await minioClient.getObject(BUCKET_NAME, doc.pdfUrl);
         const originalFilename = doc.title || doc.fileName;
         const safeFilename = sanitizeFilename(originalFilename);
         const encodedFilename = encodeURIComponent(originalFilename);
 
-        return new NextResponse(stream as any, {
+        // Convert Node stream to Web ReadableStream with larger chunks for throughput
+        const webStream = new ReadableStream({
+          start(controller) {
+            stream.on("data", (chunk: Buffer) => {
+              controller.enqueue(new Uint8Array(chunk));
+            });
+            stream.on("end", () => {
+              controller.close();
+            });
+            stream.on("error", (err: Error) => {
+              controller.error(err);
+            });
+          },
+        });
+
+        return new NextResponse(webStream, {
           status: 200,
           headers: {
             "Content-Type": "application/pdf",
+            "Content-Length": stat.size.toString(),
             "Content-Disposition": `attachment; filename="${safeFilename}.pdf"; filename*=UTF-8''${encodedFilename}.pdf`,
             "Cache-Control": "no-cache",
           },
@@ -76,6 +94,7 @@ export async function POST(request: NextRequest) {
     // Compression uses CPU heavily and adds little value for PDFs (already compressed)
     const archive = archiver("zip", {
       store: true, // Store mode - no compression, maximum speed
+      highWaterMark: 1024 * 1024, // 1MB buffer for better throughput
     });
 
     // Track filenames to avoid duplicates
