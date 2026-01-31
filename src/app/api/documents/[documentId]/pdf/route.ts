@@ -4,6 +4,9 @@ import { db } from "@/lib/db";
 import { document } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { PDFDocument } from "pdf-lib";
+import minioClient from "@/lib/minio";
+
+const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
 
 /**
  * GET /api/documents/[documentId]/pdf
@@ -47,9 +50,6 @@ export async function GET(
     const directDownload = request.nextUrl.searchParams.get("direct") === "true";
 
     if (raw || directDownload) {
-      const { default: minioClient } = await import("@/lib/minio");
-      const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
-
       // Check if client supports range requests
       const range = request.headers.get("range");
 

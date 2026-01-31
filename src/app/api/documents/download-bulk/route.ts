@@ -5,8 +5,11 @@ import { document } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
 import archiver from "archiver";
 import { Readable } from "stream";
+import minioClient from "@/lib/minio";
 
 export const maxDuration = 300; // 5 minutes for large downloads
+
+const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
 
 /**
  * Sanitize filename for HTTP headers - converts Unicode to ASCII-safe format
@@ -44,10 +47,6 @@ export async function POST(request: NextRequest) {
     if (docs.length === 0) {
       return NextResponse.json({ error: "No documents found" }, { status: 404 });
     }
-
-    // Import minio client for streaming
-    const { default: minioClient } = await import("@/lib/minio");
-    const BUCKET_NAME = process.env.MINIO_BUCKET || "character-sheets";
 
     // Optimization: If only one document, stream it directly without zipping
     if (docs.length === 1) {
