@@ -27,7 +27,7 @@
     "dotenv": "^17.2.3",
     "drizzle-kit": "^0.31.8",
     "drizzle-orm": "^0.45.1",
-    "framer-motion": "^12.30.0",
+    "framer-motion": "^12.31.0",
     "lucide-react": "^0.563.0",
     "minio": "^8.0.6",
     "nanoid": "^5.1.6",
