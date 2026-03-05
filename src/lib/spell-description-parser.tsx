@@ -3,13 +3,114 @@
 import React from "react";
 
 /**
- * Parse simple HTML tags from spell descriptions and convert to React components
- * Supports: <b>, <i>, <b><i>, nested combinations
- *
- * @param text - Text potentially containing HTML tags
- * @returns React elements with proper formatting
+ * Parse markdown-style tables from spell descriptions
+ * Handles various formats including those using > as row separators or || as line breaks
  */
-export function parseSpellDescription(text: string): React.ReactNode {
+function parseMarkdownTable(
+  text: string,
+): { headers: string[]; rows: Array<Record<string, string>> } | null {
+  if (!text.includes("|")) return null;
+
+  // Normalize the text by replacing delimiter patterns with newlines
+  const normalizedText = text
+    .replace(/\s*\|\s*>\s*/g, "\n|") // |> becomes newline + |
+    .replace(/>[\s]*\|/g, "|\n") // >| becomes | + newline
+    .replace(/\s+>\s+/g, "\n") // > alone becomes newline
+    .replace(/\|\s*\|/g, "\n|"); // || becomes newline + | (for tables without proper line breaks)
+
+  const lines = normalizedText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l !== "" && l.includes("|"));
+
+  if (lines.length < 3) return null;
+
+  // A table consists of: header row, separator row, and data rows
+  // Find separator row - looks like |---|---|---| with at least one dash
+  let headerRowIdx = -1;
+  let separatorRowIdx = -1;
+
+  for (let i = 0; i < Math.min(lines.length - 1, lines.length); i++) {
+    const line = lines[i];
+    const nextLine = i + 1 < lines.length ? lines[i + 1] : null;
+
+    // Check if next line is a separator (contains pipes and dashes)
+    if (
+      nextLine &&
+      /\|[\s\-|:]*-[\s\-|:]*\|/.test(nextLine) &&
+      !line.match(/^[\s]*\|[\s\-|:]*-[\s\-|:]*\|[\s]*$/)
+    ) {
+      headerRowIdx = i;
+      separatorRowIdx = i + 1;
+      break;
+    }
+  }
+
+  // If no separator found in expected location, try to find it anywhere
+  if (headerRowIdx === -1) {
+    for (let i = 0; i < lines.length; i++) {
+      if (/^[\s]*\|[\s\-|:]*-[\s\-|:]*\|[\s]*$/.test(lines[i])) {
+        separatorRowIdx = i;
+        headerRowIdx = i - 1;
+        if (headerRowIdx >= 0) break;
+      }
+    }
+  }
+
+  if (headerRowIdx === -1 || separatorRowIdx === -1 || headerRowIdx < 0) {
+    return null;
+  }
+
+  // Parse header row
+  const headerLine = lines[headerRowIdx];
+  const headerCells = headerLine
+    .split("|")
+    .map((cell) =>
+      cell
+        .trim()
+        .replace(/^[\s>]+/, "")
+        .replace(/[\s>]+$/, "")
+        .trim(),
+    ) // Remove > from start/end
+    .filter((cell) => cell && cell.length > 0 && !cell.match(/^[\s\-:>]+$/));
+
+  if (headerCells.length < 1) return null;
+
+  // Parse data rows
+  const rows: Array<Record<string, string>> = [];
+  for (let i = separatorRowIdx + 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.includes("|")) continue;
+
+    const cells = line
+      .split("|")
+      .map((cell) =>
+        cell
+          .trim()
+          .replace(/^[\s>]+/, "")
+          .replace(/[\s>]+$/, "")
+          .trim(),
+      ) // Remove > from start/end
+      .filter((cell) => cell && cell.length > 0 && !cell.match(/^[\s\-:>]+$/));
+
+    if (cells.length > 0) {
+      const row: Record<string, string> = {};
+      headerCells.forEach((header, idx) => {
+        row[header] = cells[idx] || "";
+      });
+      rows.push(row);
+    }
+  }
+
+  if (rows.length === 0) return null;
+
+  return { headers: headerCells, rows };
+}
+
+/**
+ * Helper function to parse HTML tags (<b>, <i>) in text and return styled React elements
+ */
+function parseFormattedText(text: string): React.ReactNode {
   if (!text) return null;
 
   // Split by tags while preserving them
@@ -38,7 +139,6 @@ export function parseSpellDescription(text: string): React.ReactNode {
         break;
       default:
         if (part.trim()) {
-          // Wrap the text with appropriate styling
           let element: React.ReactNode = part;
 
           if (isBold && isItalic) {
@@ -71,4 +171,84 @@ export function parseSpellDescription(text: string): React.ReactNode {
   }
 
   return <>{elements}</>;
+}
+
+/**
+ * Parse simple HTML tags from spell descriptions and convert to React components
+ * Supports: <b>, <i>, <b><i>, nested combinations, and table data
+ *
+ * @param text - Text potentially containing HTML tags and table data
+ * @returns React elements with proper formatting
+ */
+export function parseSpellDescription(text: string): React.ReactNode {
+  if (!text) return null;
+
+  // Clean up the text - remove leading > characters that are used as delimiters
+  const cleanedText = text.replace(/^\s*>\s*/, "").trim();
+  if (!cleanedText) return null;
+
+  // First check if this entire text block is a markdown table
+  const tableData = parseMarkdownTable(cleanedText);
+  if (tableData && tableData.rows.length > 0 && tableData.headers.length > 0) {
+    return (
+      <div style={{ overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+        <table
+          style={{
+            borderCollapse: "collapse",
+            marginTop: "0.5rem",
+            marginBottom: "0.5rem",
+            width: "100%",
+            fontSize: "0.9em",
+            lineHeight: "inherit",
+            tableLayout: "auto",
+          }}
+        >
+          <thead>
+            <tr
+              style={{
+                borderBottom: "2px solid currentColor",
+              }}
+            >
+              {tableData.headers.map((header, idx) => (
+                <th
+                  key={idx}
+                  style={{
+                    padding: "3px 6px",
+                    textAlign: "left",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {parseFormattedText(header)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tableData.rows.map((row, rowIdx) => (
+              <tr
+                key={rowIdx}
+                style={{
+                  borderBottom: "1px solid rgba(0,0,0,0.2)",
+                }}
+              >
+                {tableData.headers.map((header, colIdx) => (
+                  <td
+                    key={colIdx}
+                    style={{
+                      padding: "3px 6px",
+                    }}
+                  >
+                    {parseFormattedText(row[header] || "")}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // Parse HTML tags in regular text
+  return parseFormattedText(cleanedText);
 }

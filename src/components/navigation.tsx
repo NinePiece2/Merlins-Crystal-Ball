@@ -5,7 +5,25 @@ import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Menu, X, Home, Compass, Settings, LogOut, Shield, Book } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Menu,
+  X,
+  Home,
+  Compass,
+  Settings,
+  LogOut,
+  Shield,
+  Book,
+  ChevronDown,
+  Printer,
+  Wand2,
+} from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useSession, signOut } from "@/lib/auth-client";
 
@@ -137,6 +155,40 @@ export function Navigation() {
                       <TooltipContent>
                         {isAdmin ? "Manage documents" : "View documents"}
                       </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger>
+                            <Button
+                              variant="ghost"
+                              className={
+                                pathname?.startsWith("/printables")
+                                  ? "bg-accent text-accent-foreground"
+                                  : ""
+                              }
+                              size="sm"
+                            >
+                              <Printer className="w-4 h-4 mr-2" />
+                              Printables
+                              <ChevronDown className="w-4 h-4 ml-1" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={() => router.push("/printables/spells")}
+                            >
+                              <Wand2 className="w-4 h-4 mr-2" />
+                              Spells
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TooltipTrigger>
+                      <TooltipContent>View printable sheets</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
@@ -329,19 +381,50 @@ export function Navigation() {
                     </Button>
 
                     {user && (
-                      <Button
-                        variant="ghost"
-                        className={`w-full justify-start h-12 ${
-                          pathname === "/documents" ? "bg-accent text-accent-foreground" : ""
-                        }`}
-                        onClick={() => {
-                          router.push("/documents");
-                          setMobileMenuOpen(false);
-                        }}
-                      >
-                        <Book className="w-5 h-5 mr-3" />
-                        <span className="font-medium">Documents</span>
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start h-12 ${
+                            pathname === "/documents" ? "bg-accent text-accent-foreground" : ""
+                          }`}
+                          onClick={() => {
+                            router.push("/documents");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <Book className="w-5 h-5 mr-3" />
+                          <span className="font-medium">Documents</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start h-12 ${
+                            pathname?.startsWith("/printables")
+                              ? "bg-accent text-accent-foreground"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            router.push("/printables/spells");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <Printer className="w-5 h-5 mr-3" />
+                          <span className="font-medium">Printables</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          className={`w-full justify-start h-12 ml-6 ${
+                            pathname?.startsWith("/printables/spells")
+                              ? "bg-accent text-accent-foreground"
+                              : ""
+                          }`}
+                          onClick={() => {
+                            router.push("/printables/spells");
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          <span className="font-medium text-sm">Spells</span>
+                        </Button>
+                      </>
                     )}
 
                     {isAdmin && (

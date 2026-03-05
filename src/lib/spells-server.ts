@@ -117,3 +117,27 @@ export async function searchSpellsByName(query: string): Promise<Spell[]> {
 
   return results;
 }
+
+/**
+ * Get all spells (server action)
+ * Used for the printables page to display all available spells
+ */
+export async function getAllSpells(): Promise<Spell[]> {
+  const spells = await loadSpells();
+  return Object.values(spells).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/**
+ * Get all unique spell classes (server action)
+ * Used for filtering in the printables page
+ */
+export async function getAllSpellClasses(): Promise<string[]> {
+  const spells = await loadSpells();
+  const classesSet = new Set<string>();
+
+  Object.values(spells).forEach((spell) => {
+    spell.class.forEach((cls) => classesSet.add(cls));
+  });
+
+  return Array.from(classesSet).sort();
+}
