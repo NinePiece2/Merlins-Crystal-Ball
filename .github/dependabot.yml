@@ -8,6 +8,9 @@ updates:
       timezone: "America/Toronto"
     commit-message:
       prefix: "deps(npm)"
+    ignore:
+      - dependency-name: "pdfjs-dist"
+        versions: [">=5.0.0"]
     groups:
       ui-dependencies:
         patterns:
