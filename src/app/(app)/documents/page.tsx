@@ -127,9 +127,6 @@ export default function DocumentsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [downloadingDocId, setDownloadingDocId] = useState<string | null>(null);
-  const [recentDownloads, setRecentDownloads] = useState<
-    Array<{ id: string; title: string; status: "downloading" | "complete"; timestamp: number }>
-  >([]);
 
   const isAdmin =
     session?.user &&
@@ -374,12 +371,6 @@ export default function DocumentsPage() {
     setDownloadingDocId(documentId);
     const toastId = toast.loading(`Preparing ${documentTitle}...`);
 
-    // Add to recent downloads
-    setRecentDownloads((prev) => [
-      { id: documentId, title: documentTitle, status: "downloading", timestamp: Date.now() },
-      ...prev.slice(0, 4), // Keep last 5
-    ]);
-
     try {
       const response = await fetch("/api/documents/download-bulk", {
         method: "POST",
@@ -408,24 +399,13 @@ export default function DocumentsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      // Update recent downloads to show complete
-      setRecentDownloads((prev) =>
-        prev.map((d) => (d.id === documentId ? { ...d, status: "complete" } : d)),
-      );
-
       toast.success(`${documentTitle} downloaded successfully!`, {
         id: toastId,
         icon: <Download className="w-4 h-4" />,
       });
-
-      // Auto-remove from recent downloads after 5 seconds
-      setTimeout(() => {
-        setRecentDownloads((prev) => prev.filter((d) => d.id !== documentId));
-      }, 5000);
     } catch (error) {
       console.error("Download error:", error);
       toast.error(`Failed to download ${documentTitle}`, { id: toastId });
-      setRecentDownloads((prev) => prev.filter((d) => d.id !== documentId));
     } finally {
       setDownloadingDocId(null);
     }
