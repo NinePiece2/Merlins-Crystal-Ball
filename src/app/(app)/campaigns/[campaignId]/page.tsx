@@ -509,7 +509,7 @@ export default function CampaignDetailPage({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="flex-1 border-amber-700/50 text-amber-100 hover:bg-amber-700/20"
+                              className="flex-1 text-black dark:border-amber-700/50 dark:text-amber-100 dark:hover:bg-amber-700/20"
                               onClick={() => {
                                 setSelectedCharacterId(member.characterId);
                                 setSelectedCharacterName(member.character?.name || "Character");
@@ -522,7 +522,7 @@ export default function CampaignDetailPage({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="border-amber-700/50 text-amber-100 hover:bg-amber-700/20 px-3"
+                              className="text-black dark:border-amber-700/50 dark:text-amber-100 dark:hover:bg-amber-700/20 px-3"
                               onClick={() => {
                                 window.open(
                                   `/api/characters/${member.characterId}/levels/${selectedLevel}/pdf`,
@@ -543,14 +543,14 @@ export default function CampaignDetailPage({
 
               {/* Show missing members */}
               {missingAtLevel.length > 0 && (
-                <Card className="p-6 border-orange-200 bg-orange-50">
+                <Card className="p-6 bg-card border-card">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="w-5 h-5 text-orange-600 mt-0.5 shrink-0" />
+                    <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                     <div>
-                      <h3 className="font-semibold text-orange-900 mb-2">
+                      <h3 className="font-semibold text-red-500 mb-2">
                         Missing Characters for Level {selectedLevel}
                       </h3>
-                      <p className="text-sm text-orange-800 mb-4">
+                      <p className="text-sm text-red-500 mb-4">
                         The following characters don&apos;t have data for level {selectedLevel}:
                       </p>
                       <div className="space-y-1">
@@ -559,7 +559,7 @@ export default function CampaignDetailPage({
                             characterId: string;
                             character?: { name: string; race: string; class: string };
                           }) => (
-                            <div key={member.characterId} className="text-sm text-orange-800">
+                            <div key={member.characterId} className="text-sm text-red-500">
                               • {member.character?.name} ({member.character?.race}{" "}
                               {member.character?.class})
                             </div>
