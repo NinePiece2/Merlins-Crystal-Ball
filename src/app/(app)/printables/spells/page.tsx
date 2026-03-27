@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { getAllSpells, getAllSpellClasses, type Spell } from "@/lib/spells-server";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,13 +18,81 @@ export default function SpellsPrintablePage() {
 
   const [selectedClasses, setSelectedClasses] = useState<Set<string>>(new Set());
   const [selectedSpells, setSelectedSpells] = useState<Set<string>>(new Set());
+  const [spellSearchQuery, setSpellSearchQuery] = useState("");
   const [currentTab, setCurrentTab] = useState<PageTab>("filter");
   const [printOptions, setPrintOptions] = useState<PrintOptions>({
     fontSize: "small",
     gridLayout: "2col",
     format: "styled",
     sortBy: "name",
+    cardHeightPreset: "standard",
+    showClasses: true,
+    showHigherLevels: true,
+    showMaterial: true,
+    inkSaver: false,
+    paperSize: "A4",
+    showPageNumbers: false,
+    pageNumberFormat: "page-number",
+    pageNumberPosition: "center",
   });
+
+  const pageNumberContent =
+    printOptions.pageNumberFormat === "number-only" ? "counter(page)" : '"Page " counter(page)';
+
+  const pageNumberRules = printOptions.showPageNumbers
+    ? printOptions.pageNumberPosition === "booklet"
+      ? `
+          @page:left {
+            @bottom-left {
+              content: ${pageNumberContent};
+              font-size: 8.5pt;
+              color: #374151;
+              font-family: 'Segoe UI', 'Arial', sans-serif;
+            }
+          }
+          @page:right {
+            @bottom-right {
+              content: ${pageNumberContent};
+              font-size: 8.5pt;
+              color: #374151;
+              font-family: 'Segoe UI', 'Arial', sans-serif;
+            }
+          }
+        `
+      : printOptions.pageNumberPosition === "left"
+        ? `
+            @page {
+              @bottom-left {
+                content: ${pageNumberContent};
+                font-size: 8.5pt;
+                color: #374151;
+                font-family: 'Segoe UI', 'Arial', sans-serif;
+              }
+            }
+          `
+        : printOptions.pageNumberPosition === "right"
+          ? `
+              @page {
+                @bottom-right {
+                  content: ${pageNumberContent};
+                  font-size: 8.5pt;
+                  color: #374151;
+                  font-family: 'Segoe UI', 'Arial', sans-serif;
+                }
+              }
+            `
+          : `
+              @page {
+                @bottom-center {
+                  content: ${pageNumberContent};
+                  font-size: 8.5pt;
+                  color: #374151;
+                  font-family: 'Segoe UI', 'Arial', sans-serif;
+                }
+              }
+            `
+    : "";
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -73,9 +141,18 @@ export default function SpellsPrintablePage() {
   };
 
   const handleSelectAllSpells = () => {
-    const filteredSpells = spells.filter(
-      (spell) => selectedClasses.size === 0 || spell.class.some((cls) => selectedClasses.has(cls)),
-    );
+    const normalizedQuery = spellSearchQuery.trim().toLowerCase();
+    const filteredSpells = spells.filter((spell) => {
+      const matchesClass =
+        selectedClasses.size === 0 || spell.class.some((cls) => selectedClasses.has(cls));
+
+      if (!matchesClass) return false;
+      if (!normalizedQuery) return true;
+
+      const searchableText =
+        `${spell.name} ${spell.id} ${spell.school} ${spell.level}`.toLowerCase();
+      return searchableText.includes(normalizedQuery);
+    });
     setSelectedSpells(new Set(filteredSpells.map((s) => s.id)));
   };
 
@@ -83,12 +160,41 @@ export default function SpellsPrintablePage() {
     setSelectedSpells(new Set());
   };
 
-  // Calculate grid columns based on layout
-  const gridColsClass = {
-    "1col": "grid-cols-1",
-    "2col": "grid-cols-2",
-    "3col": "grid-cols-3",
+  const columnCount = {
+    "1col": 1,
+    "2col": 2,
+    "3col": 3,
   }[printOptions.gridLayout];
+
+  const estimateSpellCardHeight = useCallback((spell: Spell) => {
+    const descriptionLength = (spell.desc?.length ?? 0) + (spell.higher_level?.length ?? 0);
+    const classWeight = spell.class.length * 20;
+    return 280 + descriptionLength * 0.33 + classWeight;
+  }, []);
+
+  const distributeToBalancedColumns = useCallback(
+    (sourceSpells: Spell[]): Spell[][] => {
+      const columns = Array.from({ length: columnCount }, () => ({
+        totalHeight: 0,
+        spells: [] as Spell[],
+      }));
+
+      sourceSpells.forEach((spell) => {
+        let shortestColumnIndex = 0;
+        for (let i = 1; i < columns.length; i++) {
+          if (columns[i].totalHeight < columns[shortestColumnIndex].totalHeight) {
+            shortestColumnIndex = i;
+          }
+        }
+
+        columns[shortestColumnIndex].spells.push(spell);
+        columns[shortestColumnIndex].totalHeight += estimateSpellCardHeight(spell);
+      });
+
+      return columns.map((column) => column.spells);
+    },
+    [columnCount, estimateSpellCardHeight],
+  );
 
   // Get selected spell objects and sort them
   const selectedSpellObjects = spells.filter((spell) => selectedSpells.has(spell.id));
@@ -107,8 +213,10 @@ export default function SpellsPrintablePage() {
     selectedSpellObjects.sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  // Show all spells in preview
-  const currentPageSpells = selectedSpellObjects;
+  const balancedColumns = useMemo(
+    () => distributeToBalancedColumns(selectedSpellObjects),
+    [distributeToBalancedColumns, selectedSpellObjects],
+  );
 
   if (loading) {
     return (
@@ -156,10 +264,12 @@ export default function SpellsPrintablePage() {
                 classes={classes}
                 selectedClasses={selectedClasses}
                 selectedSpells={selectedSpells}
+                searchQuery={spellSearchQuery}
                 onClassToggle={handleClassToggle}
                 onSelectAll={handleSelectAllClasses}
                 onClearAll={handleClearAllClasses}
                 onSpellToggle={handleSpellToggle}
+                onSearchQueryChange={setSpellSearchQuery}
               />
 
               <div className="flex gap-3 justify-end pt-4">
@@ -176,6 +286,21 @@ export default function SpellsPrintablePage() {
                 >
                   Select All Visible
                 </Button>
+              </div>
+
+              <div className="flex flex-col items-end gap-2 pt-3">
+                <Button
+                  onClick={() => setCurrentTab("preview")}
+                  disabled={selectedSpells.size === 0}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                >
+                  Continue to Preview & Print ({selectedSpells.size})
+                </Button>
+                {selectedSpells.size === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Select at least one spell to continue.
+                  </p>
+                )}
               </div>
             </TabsContent>
 
@@ -206,23 +331,36 @@ export default function SpellsPrintablePage() {
                         flexDirection: "column",
                       }}
                     >
-                      {/* Main content grid - fills all available space */}
+                      {/* Main content columns - adaptive height, balanced distribution */}
                       <div
-                        className={`grid gap-2 ${gridColsClass}`}
+                        className="spell-columns"
                         style={{
-                          alignContent: "start",
-                          gridAutoRows: "max-content",
-                          gridAutoFlow: "dense",
+                          display: "grid",
+                          gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                          columnGap: printOptions.gridLayout === "3col" ? "3mm" : "4mm",
                         }}
                       >
-                        {currentPageSpells.map((spell, idx) => (
-                          <PrintableSpellReference
-                            key={spell.id}
-                            spell={spell}
-                            format={printOptions.format}
-                            fontSize={printOptions.fontSize}
-                            index={idx}
-                          />
+                        {balancedColumns.map((columnSpells, columnIndex) => (
+                          <div
+                            key={`preview-column-${columnIndex}`}
+                            className="spell-column"
+                            style={{ display: "flex", flexDirection: "column", gap: "1.5mm" }}
+                          >
+                            {columnSpells.map((spell, idx) => (
+                              <PrintableSpellReference
+                                key={spell.id}
+                                spell={spell}
+                                format={printOptions.format}
+                                fontSize={printOptions.fontSize}
+                                cardHeightPreset={printOptions.cardHeightPreset}
+                                showClasses={printOptions.showClasses}
+                                showHigherLevels={printOptions.showHigherLevels}
+                                showMaterial={printOptions.showMaterial}
+                                inkSaver={printOptions.inkSaver}
+                                index={idx}
+                              />
+                            ))}
+                          </div>
                         ))}
                       </div>
                     </div>
@@ -246,19 +384,35 @@ export default function SpellsPrintablePage() {
             flexDirection: "column",
           }}
         >
-          {/* Main content grid - CSS will break pages automatically */}
           <div
-            className={`grid ${gridColsClass}`}
-            style={{ alignContent: "start", gap: "1.5mm", gridAutoFlow: "dense" }}
+            className="spell-columns"
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+              columnGap: printOptions.gridLayout === "3col" ? "3mm" : "4mm",
+            }}
           >
-            {selectedSpellObjects.map((spell, idx) => (
-              <PrintableSpellReference
-                key={spell.id}
-                spell={spell}
-                format={printOptions.format}
-                fontSize={printOptions.fontSize}
-                index={idx}
-              />
+            {balancedColumns.map((columnSpells, columnIndex) => (
+              <div
+                key={`print-column-${columnIndex}`}
+                className="spell-column"
+                style={{ display: "flex", flexDirection: "column", gap: "1.5mm" }}
+              >
+                {columnSpells.map((spell, idx) => (
+                  <PrintableSpellReference
+                    key={spell.id}
+                    spell={spell}
+                    format={printOptions.format}
+                    fontSize={printOptions.fontSize}
+                    cardHeightPreset={printOptions.cardHeightPreset}
+                    showClasses={printOptions.showClasses}
+                    showHigherLevels={printOptions.showHigherLevels}
+                    showMaterial={printOptions.showMaterial}
+                    inkSaver={printOptions.inkSaver}
+                    index={idx}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -268,6 +422,9 @@ export default function SpellsPrintablePage() {
       <style>{`
       .print-only {
         display: none !important;
+      }
+      .spell-columns .spell-column > div[data-print-index] {
+        margin-bottom: 0;
       }
       /* Table styling for spell descriptions */
       table {
@@ -322,8 +479,8 @@ export default function SpellsPrintablePage() {
         .print-page {
           background: white !important;
           color: inherit !important;
-          break-after: page;
-          page-break-after: always;
+          break-after: auto;
+          page-break-after: auto;
           orphans: 2;
           widows: 2;
           padding: 6mm;
@@ -331,32 +488,20 @@ export default function SpellsPrintablePage() {
           display: flex;
           flex-direction: column;
         }
-        .print-page > div {
-          display: contents;
-        }
-        .print-page .grid {
-          display: grid !important;
-          width: 100%;
-          gap: 1.5mm !important;
-          auto-rows: max-content;
-          grid-auto-flow: dense;
-        }
-        .print-page .grid-cols-1 {
-          grid-template-columns: 1fr !important;
-        }
-        .print-page .grid-cols-2 {
-          grid-template-columns: repeat(2, 1fr) !important;
-          column-gap: 4mm !important;
-        }
-        .print-page .grid-cols-3 {
-          grid-template-columns: repeat(3, 1fr) !important;
-          column-gap: 3mm !important;
+        .print-page .spell-columns .spell-column > div[data-card-height-preset="variable"] {
+          break-inside: auto;
+          page-break-inside: auto;
         }
         /* Spell reference styling for print */
-        .print-page div[data-print-index] {
+        .print-page div[data-print-index]:not([data-card-height-preset="variable"]) {
           color: #000 !important;
           page-break-inside: avoid;
           break-inside: avoid;
+        }
+        .print-page div[data-print-index][data-card-height-preset="variable"] {
+          color: #000 !important;
+          page-break-inside: auto;
+          break-inside: auto;
         }
         .print-page div[data-print-index] div {
           color: inherit !important;
@@ -394,19 +539,18 @@ export default function SpellsPrintablePage() {
         /* Ensure text is readable */
         .print-page {
           font-family: 'Segoe UI', 'Arial', sans-serif;
-          font-size: 10pt;
-          line-height: 1.3;
           color: #000;
         }
         .print-page * {
           color: inherit !important;
         }
         @page {
-          size: A4;
+          size: ${printOptions.paperSize};
           margin: 8mm;
           orphans: 2;
           widows: 2;
         }
+        ${pageNumberRules}
       }
     `}</style>
     </>

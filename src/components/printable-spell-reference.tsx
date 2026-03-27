@@ -6,8 +6,13 @@ import { type Spell } from "@/lib/spells-server";
 
 interface PrintableSpellReferenceProps {
   spell: Spell;
-  format: "monochrome" | "styled";
+  format: "monochrome" | "styled" | "professional";
   fontSize: "xsmall" | "small" | "medium" | "large";
+  cardHeightPreset: "compact" | "standard" | "generous" | "variable";
+  showClasses: boolean;
+  showHigherLevels: boolean;
+  showMaterial: boolean;
+  inkSaver: boolean;
   index?: number;
 }
 
@@ -15,6 +20,11 @@ export function PrintableSpellReference({
   spell,
   format,
   fontSize,
+  cardHeightPreset,
+  showClasses,
+  showHigherLevels,
+  showMaterial,
+  inkSaver,
   index,
 }: PrintableSpellReferenceProps) {
   const levelDisplay = spell.level === 0 ? "Cantrip" : `Level ${spell.level}`;
@@ -28,121 +38,273 @@ export function PrintableSpellReference({
   };
 
   const config = fontConfig[fontSize];
+  const cardHeight = {
+    compact: "8cm",
+    standard: "12cm",
+    generous: "15cm",
+    variable: "auto",
+  }[cardHeightPreset];
+  const hasFixedHeight = cardHeightPreset !== "variable";
 
   // Color configuration for screen and print modes
-  // For styled format, use amber/brown colors; for monochrome, inherit from parent
+  // Keep the same two modes, but add clearer hierarchy and section contrast for print.
   const colors = {
-    border: format === "styled" ? "#92400e" : "currentColor",
-    primary: format === "styled" ? "#78350f" : "currentColor",
-    secondary: format === "styled" ? "#a16207" : "currentColor",
-    text: "inherit",
+    border: format === "styled" ? "#92400e" : format === "professional" ? "#334155" : "#4b5563",
+    primary: format === "styled" ? "#78350f" : format === "professional" ? "#0f172a" : "#111827",
+    secondary: format === "styled" ? "#a16207" : format === "professional" ? "#1e3a8a" : "#4b5563",
+    label: format === "styled" ? "#92400e" : format === "professional" ? "#334155" : "#6b7280",
+    chipBg: format === "styled" ? "#fef3c7" : format === "professional" ? "#dbeafe" : "#f3f4f6",
+    sectionBg: format === "styled" ? "#fffbeb" : format === "professional" ? "#f8fafc" : "#f9fafb",
+    text: format === "styled" ? "#451a03" : "#111827",
   };
+
+  const themedColors = inkSaver
+    ? {
+        ...colors,
+        chipBg: "transparent",
+        sectionBg: "#ffffff",
+        border: format === "styled" ? "#a8a29e" : format === "professional" ? "#94a3b8" : "#9ca3af",
+      }
+    : colors;
+
+  const hasV = spell.components.includes("V");
+  const hasS = spell.components.includes("S");
+  const hasM = spell.components.includes("M");
+  const showHigherLevel = Boolean(spell.higher_level);
 
   return (
     <div
-      className="break-inside-avoid"
+      className={hasFixedHeight ? "break-inside-avoid" : ""}
       data-print-index={index}
+      data-spell-id={spell.id}
+      data-card-height-preset={cardHeightPreset}
       style={{
-        marginBottom: config.spacing,
+        marginBottom: "0",
         fontFamily: '"Segoe UI", Arial, sans-serif',
         fontSize: config.base,
         lineHeight: config.lineHeight,
-        breakInside: "avoid",
-        pageBreakInside: "avoid",
-        color: colors.text,
+        height: undefined,
+        minHeight: hasFixedHeight ? cardHeight : undefined,
+        display: "flex",
+        flexDirection: "column",
+        padding: "3mm",
+        border: `1.5px solid ${themedColors.border}`,
+        borderRadius: "2mm",
+        background: themedColors.sectionBg,
+        overflow: "visible",
+        breakInside: hasFixedHeight ? "avoid" : "auto",
+        pageBreakInside: hasFixedHeight ? "avoid" : "auto",
+        color: themedColors.text,
       }}
     >
-      {/* Header: Spell Name | Level • School */}
+      {/* Header: Spell Name + Metadata */}
       <div
         style={{
           display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          marginBottom: "1mm",
-          paddingBottom: "1mm",
-          borderBottom: `2px solid ${colors.border}`,
+          flexDirection: "column",
+          gap: "1mm",
+          marginBottom: "1.5mm",
+          paddingBottom: "1.5mm",
+          borderBottom: `2px solid ${themedColors.border}`,
         }}
       >
-        <span
+        <div
           style={{
             fontWeight: "bold",
-            fontSize: config.title,
-            color: colors.primary,
+            fontSize: `calc(${config.title} + 1pt)`,
+            color: themedColors.primary,
+            lineHeight: "1.2",
           }}
         >
           {spell.name}
-        </span>
-        <span
+        </div>
+        <div
           style={{
-            fontSize: config.label,
-            color: colors.secondary,
-            fontWeight: "500",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1mm",
           }}
         >
-          {levelDisplay} • {spell.school}
-          {spell.ritual && " • Ritual"}
-        </span>
+          <span
+            style={{
+              fontSize: config.label,
+              color: themedColors.secondary,
+              fontWeight: "700",
+              border: `1px solid ${themedColors.border}`,
+              borderRadius: "999px",
+              padding: "0.2mm 1.4mm",
+              background: themedColors.chipBg,
+            }}
+          >
+            {levelDisplay}
+          </span>
+          <span
+            style={{
+              fontSize: config.label,
+              color: themedColors.secondary,
+              fontWeight: "700",
+              border: `1px solid ${themedColors.border}`,
+              borderRadius: "999px",
+              padding: "0.2mm 1.4mm",
+              background: themedColors.chipBg,
+            }}
+          >
+            {spell.school}
+          </span>
+          {spell.ritual && (
+            <span
+              style={{
+                fontSize: config.label,
+                color: themedColors.secondary,
+                fontWeight: "700",
+                border: `1px solid ${themedColors.border}`,
+                borderRadius: "999px",
+                padding: "0.2mm 1.4mm",
+                background: themedColors.chipBg,
+              }}
+            >
+              Ritual
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Quick reference line: Range | Time | Conc. | Duration */}
+      {/* Components block */}
+      <div
+        style={{
+          marginBottom: "1.5mm",
+          paddingBottom: "1mm",
+          borderBottom: `1px solid ${themedColors.border}`,
+        }}
+      >
+        <div
+          style={{
+            fontWeight: "bold",
+            color: themedColors.label,
+            fontSize: config.label,
+            marginBottom: "0.8mm",
+            textTransform: "uppercase",
+            letterSpacing: "0.04em",
+          }}
+        >
+          Components
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "1mm", flexWrap: "wrap" }}>
+          {[
+            { key: "V", active: hasV },
+            { key: "S", active: hasS },
+            { key: "M", active: hasM },
+          ].map((entry) => (
+            <span
+              key={entry.key}
+              style={{
+                minWidth: "5mm",
+                textAlign: "center",
+                fontWeight: "700",
+                fontSize: config.label,
+                border: `1px solid ${themedColors.border}`,
+                borderRadius: "1mm",
+                padding: "0.5mm 1mm",
+                background: entry.active ? themedColors.chipBg : "transparent",
+                color: entry.active ? themedColors.primary : themedColors.label,
+                opacity: entry.active ? 1 : 0.55,
+              }}
+            >
+              {entry.key}
+            </span>
+          ))}
+          {showMaterial && spell.material && (
+            <span style={{ fontSize: config.label, color: themedColors.secondary }}>
+              {spell.material}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Quick reference stats */}
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr 1fr",
-          gap: "2mm",
-          fontSize: config.label,
+          gridTemplateColumns: "1fr 1fr",
+          gap: "1mm 2mm",
           marginBottom: "1.5mm",
-          padding: "1mm 0",
-          color: colors.primary,
+          paddingBottom: "1.5mm",
+          borderBottom: `1px solid ${themedColors.border}`,
         }}
       >
         <div>
-          <div style={{ fontWeight: "bold" }}>Range</div>
-          <div>{spell.range}</div>
+          <div style={{ fontWeight: "700", color: themedColors.label, fontSize: config.label }}>
+            Range
+          </div>
+          <div style={{ color: themedColors.primary, fontWeight: 600 }}>{spell.range}</div>
         </div>
         <div>
-          <div style={{ fontWeight: "bold" }}>Casting</div>
-          <div>{spell.casting_time}</div>
+          <div style={{ fontWeight: "700", color: themedColors.label, fontSize: config.label }}>
+            Casting Time
+          </div>
+          <div style={{ color: themedColors.primary, fontWeight: 600 }}>{spell.casting_time}</div>
         </div>
         <div>
-          <div style={{ fontWeight: "bold" }}>Conc.</div>
-          <div>{spell.concentration ? "Yes" : "No"}</div>
+          <div style={{ fontWeight: "700", color: themedColors.label, fontSize: config.label }}>
+            Concentration
+          </div>
+          <div style={{ color: themedColors.primary, fontWeight: 600 }}>
+            {spell.concentration ? "Yes" : "No"}
+          </div>
         </div>
         <div>
-          <div style={{ fontWeight: "bold" }}>Duration</div>
-          <div>{spell.duration}</div>
+          <div style={{ fontWeight: "700", color: themedColors.label, fontSize: config.label }}>
+            Duration
+          </div>
+          <div style={{ color: themedColors.primary, fontWeight: 600 }}>{spell.duration}</div>
         </div>
-      </div>
-
-      {/* Components */}
-      <div style={{ marginBottom: "1mm", fontSize: config.base }}>
-        <span style={{ fontWeight: "bold", color: colors.primary }}>Components:</span>{" "}
-        {spell.components.join(", ")}
-        {spell.material && (
-          <>
-            <div style={{ marginTop: "0.5mm", fontSize: config.label }}>
-              <span style={{ fontWeight: "bold", color: colors.primary }}>M:</span> {spell.material}
-            </div>
-          </>
-        )}
       </div>
 
       {/* Classes */}
-      {spell.class.length > 0 && (
-        <div style={{ marginBottom: "1mm", fontSize: config.label }}>
-          <span style={{ fontWeight: "bold", color: colors.primary }}>Classes:</span>{" "}
-          {spell.class.join(", ")}
+      {showClasses && spell.class.length > 0 && (
+        <div style={{ marginBottom: "1.5mm" }}>
+          <div
+            style={{
+              fontWeight: "700",
+              color: themedColors.label,
+              fontSize: config.label,
+              marginBottom: "0.8mm",
+              textTransform: "uppercase",
+              letterSpacing: "0.04em",
+            }}
+          >
+            Classes
+          </div>
+          <div style={{ display: "flex", gap: "1mm", flexWrap: "wrap" }}>
+            {spell.class.map((className) => (
+              <span
+                key={className}
+                style={{
+                  fontSize: config.label,
+                  border: `1px solid ${themedColors.border}`,
+                  borderRadius: "999px",
+                  padding: "0.2mm 1.2mm",
+                  color: themedColors.secondary,
+                  background: themedColors.chipBg,
+                  lineHeight: "1.2",
+                }}
+              >
+                {className}
+              </span>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Description */}
       <div
         style={{
-          marginTop: "1mm",
+          marginTop: "0.5mm",
+          flex: "1 1 auto",
           color: "inherit",
           whiteSpace: "pre-wrap",
           wordWrap: "break-word",
-          overflow: "hidden",
+          overflow: "visible",
           display: "block",
         }}
       >
@@ -150,10 +312,18 @@ export function PrintableSpellReference({
       </div>
 
       {/* Higher Level */}
-      {spell.higher_level && (
-        <div style={{ marginTop: "1mm", paddingTop: "0.5mm" }}>
-          <span style={{ fontWeight: "bold", color: colors.primary }}>At Higher Levels:</span>{" "}
-          <span style={{ color: colors.text }}>{parseSpellDescription(spell.higher_level)}</span>
+      {showHigherLevel && showHigherLevels && (
+        <div
+          style={{
+            marginTop: "1mm",
+            paddingTop: "0.8mm",
+            borderTop: `1px solid ${themedColors.border}`,
+          }}
+        >
+          <span style={{ fontWeight: "bold", color: themedColors.primary }}>At Higher Levels:</span>{" "}
+          <span style={{ color: themedColors.text }}>
+            {parseSpellDescription(spell.higher_level ?? "")}
+          </span>
         </div>
       )}
     </div>

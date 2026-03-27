@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { type Spell } from "@/lib/spells-server";
 
 interface SpellFilterProps {
@@ -13,10 +14,12 @@ interface SpellFilterProps {
   classes: string[];
   selectedClasses: Set<string>;
   selectedSpells: Set<string>;
+  searchQuery: string;
   onClassToggle: (className: string) => void;
   onSelectAll: () => void;
   onClearAll: () => void;
   onSpellToggle: (spellId: string) => void;
+  onSearchQueryChange: (query: string) => void;
 }
 
 export function SpellFilter({
@@ -24,14 +27,25 @@ export function SpellFilter({
   classes,
   selectedClasses,
   selectedSpells,
+  searchQuery,
   onClassToggle,
   onSelectAll,
   onClearAll,
   onSpellToggle,
+  onSearchQueryChange,
 }: SpellFilterProps) {
-  const filteredSpells = spells.filter(
-    (spell) => selectedClasses.size === 0 || spell.class.some((cls) => selectedClasses.has(cls)),
-  );
+  const normalizedQuery = searchQuery.trim().toLowerCase();
+
+  const filteredSpells = spells.filter((spell) => {
+    const matchesClass =
+      selectedClasses.size === 0 || spell.class.some((cls) => selectedClasses.has(cls));
+
+    if (!matchesClass) return false;
+    if (!normalizedQuery) return true;
+
+    const searchableText = `${spell.name} ${spell.id} ${spell.school} ${spell.level}`.toLowerCase();
+    return searchableText.includes(normalizedQuery);
+  });
 
   const selectAllClasses = selectedClasses.size === classes.length;
 
@@ -93,11 +107,22 @@ export function SpellFilter({
       <div className="lg:col-span-3">
         <Card className="bg-background border-border">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-foreground text-lg">
-                Select Spells ({selectedSpells.size} of {filteredSpells.length})
-              </CardTitle>
-              <Badge className="bg-primary text-primary-foreground">{filteredSpells.length}</Badge>
+            <div className="space-y-3">
+              <Input
+                placeholder="Search spells by name, id, school, or level"
+                value={searchQuery}
+                onChange={(e) => onSearchQueryChange(e.target.value)}
+                className="bg-muted border-border text-foreground"
+              />
+
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-foreground text-lg">
+                  Select Spells ({selectedSpells.size} of {filteredSpells.length})
+                </CardTitle>
+                <Badge className="bg-primary text-primary-foreground">
+                  {filteredSpells.length}
+                </Badge>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -128,7 +153,9 @@ export function SpellFilter({
 
             {filteredSpells.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-muted-foreground">No spells found for selected classes</p>
+                <p className="text-muted-foreground">
+                  No spells found for the selected classes and search query
+                </p>
               </div>
             )}
           </CardContent>

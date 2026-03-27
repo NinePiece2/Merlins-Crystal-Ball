@@ -187,68 +187,89 @@ export function parseSpellDescription(text: string): React.ReactNode {
   const cleanedText = text.replace(/^\s*>\s*/, "").trim();
   if (!cleanedText) return null;
 
-  // First check if this entire text block is a markdown table
-  const tableData = parseMarkdownTable(cleanedText);
-  if (tableData && tableData.rows.length > 0 && tableData.headers.length > 0) {
-    return (
-      <div style={{ overflowX: "auto", maxWidth: "100%", width: "100%" }}>
-        <table
-          style={{
-            borderCollapse: "collapse",
-            marginTop: "0.5rem",
-            marginBottom: "0.5rem",
-            width: "100%",
-            fontSize: "0.9em",
-            lineHeight: "inherit",
-            tableLayout: "auto",
-          }}
-        >
-          <thead>
-            <tr
-              style={{
-                borderBottom: "2px solid currentColor",
-              }}
-            >
-              {tableData.headers.map((header, idx) => (
-                <th
-                  key={idx}
-                  style={{
-                    padding: "3px 6px",
-                    textAlign: "left",
-                    fontWeight: "bold",
-                  }}
-                >
-                  {parseFormattedText(header)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {tableData.rows.map((row, rowIdx) => (
-              <tr
-                key={rowIdx}
+  // Render mixed text/table content by paragraph block so descriptions that contain
+  // one or more tables still keep all surrounding prose.
+  const blocks = cleanedText
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  const renderTable = (
+    tableData: { headers: string[]; rows: Array<Record<string, string>> },
+    key: string,
+  ) => (
+    <div key={key} style={{ overflowX: "auto", maxWidth: "100%", width: "100%" }}>
+      <table
+        style={{
+          borderCollapse: "collapse",
+          marginTop: "0.5rem",
+          marginBottom: "0.5rem",
+          width: "100%",
+          fontSize: "0.9em",
+          lineHeight: "inherit",
+          tableLayout: "auto",
+        }}
+      >
+        <thead>
+          <tr
+            style={{
+              borderBottom: "2px solid currentColor",
+            }}
+          >
+            {tableData.headers.map((header, idx) => (
+              <th
+                key={`${key}-h-${idx}`}
                 style={{
-                  borderBottom: "1px solid rgba(0,0,0,0.2)",
+                  padding: "3px 6px",
+                  textAlign: "left",
+                  fontWeight: "bold",
                 }}
               >
-                {tableData.headers.map((header, colIdx) => (
-                  <td
-                    key={colIdx}
-                    style={{
-                      padding: "3px 6px",
-                    }}
-                  >
-                    {parseFormattedText(row[header] || "")}
-                  </td>
-                ))}
-              </tr>
+                {parseFormattedText(header)}
+              </th>
             ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
+          </tr>
+        </thead>
+        <tbody>
+          {tableData.rows.map((row, rowIdx) => (
+            <tr
+              key={`${key}-r-${rowIdx}`}
+              style={{
+                borderBottom: "1px solid rgba(0,0,0,0.2)",
+              }}
+            >
+              {tableData.headers.map((header, colIdx) => (
+                <td
+                  key={`${key}-r-${rowIdx}-c-${colIdx}`}
+                  style={{
+                    padding: "3px 6px",
+                  }}
+                >
+                  {parseFormattedText(row[header] || "")}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  // Parse HTML tags in regular text
-  return parseFormattedText(cleanedText);
+  return (
+    <>
+      {blocks.map((block, idx) => {
+        const tableData = parseMarkdownTable(block);
+
+        if (tableData && tableData.rows.length > 0 && tableData.headers.length > 0) {
+          return renderTable(tableData, `table-${idx}`);
+        }
+
+        return (
+          <div key={`text-${idx}`} style={{ marginBottom: idx < blocks.length - 1 ? "0.4rem" : 0 }}>
+            {parseFormattedText(block)}
+          </div>
+        );
+      })}
+    </>
+  );
 }
