@@ -16,7 +16,8 @@ function parseMarkdownTable(
     .replace(/\s*\|\s*>\s*/g, "\n|") // |> becomes newline + |
     .replace(/>[\s]*\|/g, "|\n") // >| becomes | + newline
     .replace(/\s+>\s+/g, "\n") // > alone becomes newline
-    .replace(/\|\s*\|/g, "\n|"); // || becomes newline + | (for tables without proper line breaks)
+    .replace(/\|\s*\|/g, "\n|") // || becomes newline + | (for tables without proper line breaks)
+    .replace(/\s*\n\s*/g, "\n"); // \n becomes newline delimiter
 
   const lines = normalizedText
     .split("\n")
@@ -255,18 +256,91 @@ export function parseSpellDescription(text: string): React.ReactNode {
     </div>
   );
 
+  // Parse block content including text and tables
+  const parseBlockContent = (block: string, blockIdx: number): React.ReactNode => {
+    // Split block into lines
+    const lines = block.split("\n");
+    const content: React.ReactNode[] = [];
+    let currentTextLines: string[] = [];
+    let elementKey = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+
+      // Check if this is a table line (contains |)
+      if (line.includes("|")) {
+        // Try to parse a table starting from this line
+        const remainingLines = lines.slice(i).join("\n");
+        const tableData = parseMarkdownTable(remainingLines);
+
+        if (tableData && tableData.rows.length > 0 && tableData.headers.length > 0) {
+          // Flush any accumulated text
+          if (currentTextLines.length > 0) {
+            const textBlock = currentTextLines.join("\n").trim();
+            if (textBlock) {
+              content.push(
+                <div key={`text-${blockIdx}-${elementKey}`} style={{ marginBottom: "0.4rem" }}>
+                  {parseFormattedText(textBlock)}
+                </div>,
+              );
+              elementKey++;
+            }
+            currentTextLines = [];
+          }
+
+          // Render the table
+          content.push(renderTable(tableData, `table-${blockIdx}-${elementKey}`));
+          elementKey++;
+
+          // Skip lines that were part of the table
+          // Count table lines: header + separator + rows
+          const tableLineCount = 2 + tableData.rows.length; // header + separator + data rows
+          i += tableLineCount - 1; // -1 because loop will increment
+        } else {
+          // Not a valid table, treat as regular text
+          currentTextLines.push(line);
+        }
+      } else {
+        // Regular text line
+        currentTextLines.push(line);
+      }
+    }
+
+    // Flush any remaining text
+    if (currentTextLines.length > 0) {
+      const textBlock = currentTextLines.join("\n").trim();
+      if (textBlock) {
+        content.push(
+          <div key={`text-${blockIdx}-${elementKey}`} style={{ marginBottom: 0 }}>
+            {parseFormattedText(textBlock)}
+          </div>,
+        );
+      }
+    }
+
+    return content.length > 0 ? <>{content}</> : null;
+  };
+
   return (
     <>
       {blocks.map((block, idx) => {
         const tableData = parseMarkdownTable(block);
 
         if (tableData && tableData.rows.length > 0 && tableData.headers.length > 0) {
-          return renderTable(tableData, `table-${idx}`);
+          // If the entire block is just a table, render it
+          const textBeforeTable = block.split("|")[0].trim();
+          if (!textBeforeTable) {
+            return renderTable(tableData, `table-${idx}`);
+          }
         }
 
+        // Parse block with mixed content
         return (
-          <div key={`text-${idx}`} style={{ marginBottom: idx < blocks.length - 1 ? "0.4rem" : 0 }}>
-            {parseFormattedText(block)}
+          <div
+            key={`block-${idx}`}
+            style={{ marginBottom: idx < blocks.length - 1 ? "0.4rem" : 0 }}
+          >
+            {parseBlockContent(block, idx)}
           </div>
         );
       })}

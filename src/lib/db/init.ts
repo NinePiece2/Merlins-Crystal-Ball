@@ -16,18 +16,6 @@ export async function initializeDatabase() {
   try {
     console.log("Initializing 5e_data table...");
 
-    // Check if the spells entry already exists
-    const existingSpells = await db
-      .select()
-      .from(dndData)
-      .where(eq(dndData.key, "spells"))
-      .limit(1);
-
-    if (existingSpells.length > 0) {
-      console.log("Spells data already exists in database, skipping initialization");
-      return;
-    }
-
     // Load spells from JSON file
     const spellsPath = path.join(process.cwd(), "data", "spells.json");
     console.log(`Looking for spells file at: ${spellsPath}`);
@@ -41,12 +29,21 @@ export async function initializeDatabase() {
     const spellsData = JSON.parse(fs.readFileSync(spellsPath, "utf-8"));
     console.log(`Loaded ${Object.keys(spellsData).length} spell entries`);
 
-    // Insert spells data
-    console.log("Inserting spells data into database...");
-    await db.insert(dndData).values({
-      key: "spells",
-      value: spellsData,
-    });
+    // Insert or update spells data (upsert)
+    console.log("Inserting/updating spells data into database...");
+    await db
+      .insert(dndData)
+      .values({
+        key: "spells",
+        value: spellsData,
+      })
+      .onConflictDoUpdate({
+        target: dndData.key,
+        set: {
+          value: spellsData,
+          updatedAt: new Date(),
+        },
+      });
 
     console.log("Successfully initialized 5e_data table with spells data");
   } catch (error) {

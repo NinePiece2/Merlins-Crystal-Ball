@@ -16,6 +16,15 @@ spec:
       labels:
         run: merlins-crystal-ball-app
     spec:
+      initContainers:
+        - name: db-init
+          image: ghcr.io/ninepiece2/merlins-crystal-ball:latest
+          command: ["npm", "run", "db:init"]
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: DATABASE_URL
+              value: "postgresql://user:password@192.168.10.105:5432/merlins_crystal_ball_prod"
       containers:
         - name: merlins-crystal-ball-app
           image: ghcr.io/ninepiece2/merlins-crystal-ball:latest
