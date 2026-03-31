@@ -127,12 +127,10 @@ metadata:
   name: merlins-crystal-ball-ingress
   namespace: merlins-crystal-ball
   annotations:
-    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
-    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
-    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+    haproxy-ingress.github.io/timeout-server: "600s"
+    haproxy-ingress.github.io/timeout-connect: "10s"
 spec:
-  ingressClassName: nginx
+  ingressClassName: haproxy
   rules:
     - host: merlins-crystal-ball.romitsagu.com
       http:
