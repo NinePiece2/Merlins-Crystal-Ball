@@ -114,12 +114,36 @@ spec:
   selector:
     run: merlins-crystal-ball-app
   ports:
-    - name: https
+    - name: http
       protocol: TCP
       port: 80
       targetPort: 3000
-      nodePort: 30009
-  type: LoadBalancer
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: merlins-crystal-ball-ingress
+  namespace: merlins-crystal-ball
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-http-version: "1.1"
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: merlins-crystal-ball.romitsagu.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: merlins-crystal-ball-app-service
+                port:
+                  number: 80
 
 ---
 apiVersion: autoscaling/v2
