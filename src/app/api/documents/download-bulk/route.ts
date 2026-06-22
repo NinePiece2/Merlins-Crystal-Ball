@@ -3,7 +3,7 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { document } from "@/lib/db/schema";
 import { inArray } from "drizzle-orm";
-import archiver from "archiver";
+import { ZipArchive } from "archiver";
 import { Readable } from "stream";
 import minioClient from "@/lib/minio";
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
 
     // Create a zip archive with NO compression (store mode) for maximum speed
     // Compression uses CPU heavily and adds little value for PDFs (already compressed)
-    const archive = archiver("zip", {
+    const archive = new ZipArchive({
       store: true, // Store mode - no compression, maximum speed
       highWaterMark: 1024 * 1024, // 1MB buffer for better throughput
     });
