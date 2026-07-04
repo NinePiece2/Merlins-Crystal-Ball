@@ -102,33 +102,38 @@ function sanitizePrintOptions(partial: Partial<PrintOptions>, current: PrintOpti
 }
 
 export function PrintOptionsComponent({ options, onOptionsChange }: PrintOptionsComponentProps) {
-  const [hasCustomPreset, setHasCustomPreset] = React.useState(false);
-  const [presetStatus, setPresetStatus] = React.useState<string | null>(null);
-  const [savedAtText, setSavedAtText] = React.useState<string | null>(null);
+  const readPresetAvailability = React.useCallback(() => {
+    if (typeof window === "undefined") {
+      return { hasCustomPreset: false, savedAtText: null as string | null };
+    }
 
-  const updatePresetAvailability = React.useCallback(() => {
-    if (typeof window === "undefined") return;
     const raw = window.localStorage.getItem(CUSTOM_PRESET_KEY);
-    setHasCustomPreset(Boolean(raw));
-
     if (!raw) {
-      setSavedAtText(null);
-      return;
+      return { hasCustomPreset: false, savedAtText: null as string | null };
     }
 
     try {
       const parsed = JSON.parse(raw) as StoredPreset | Partial<PrintOptions>;
       const savedAt =
         "savedAt" in parsed && typeof parsed.savedAt === "string" ? new Date(parsed.savedAt) : null;
-      setSavedAtText(savedAt && !Number.isNaN(savedAt.getTime()) ? savedAt.toLocaleString() : null);
+
+      return {
+        hasCustomPreset: true,
+        savedAtText: savedAt && !Number.isNaN(savedAt.getTime()) ? savedAt.toLocaleString() : null,
+      };
     } catch {
-      setSavedAtText(null);
+      return { hasCustomPreset: true, savedAtText: null as string | null };
     }
   }, []);
 
-  React.useEffect(() => {
-    updatePresetAvailability();
-  }, [updatePresetAvailability]);
+  const [{ hasCustomPreset, savedAtText }, setPresetAvailability] = React.useState(() =>
+    readPresetAvailability(),
+  );
+  const [presetStatus, setPresetStatus] = React.useState<string | null>(null);
+
+  const updatePresetAvailability = React.useCallback(() => {
+    setPresetAvailability(readPresetAvailability());
+  }, [readPresetAvailability]);
 
   const applyPreset = (preset: "table-reference" | "compact-handout" | "archive-copy") => {
     if (preset === "table-reference") {

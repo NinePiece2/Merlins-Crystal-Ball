@@ -1,7 +1,6 @@
 import * as dotenv from "dotenv";
 import { db } from "./index";
 import { dndData } from "./schema";
-import { eq } from "drizzle-orm";
 import * as fs from "fs";
 import * as path from "path";
 
