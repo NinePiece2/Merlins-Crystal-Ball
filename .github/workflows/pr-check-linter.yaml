@@ -1,4 +1,4 @@
-name: PR Build & Test
+name: PR Build Lint Check
 
 on:
   pull_request:
@@ -24,19 +24,7 @@ jobs:
       - name: Generate Drizzle
         run: npm run db:generate
 
-      - name: Run tests
-        run: npm run test:run
-
       - name: Run lint
         env:
           CI: false
         run: npm run lint
-
-      - name: Run build
-        env:
-          CI: false
-          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
-        run: npm run build
-
-      - name: Build Docker image
-        run: docker build -t merlins-crystal-ball:test .

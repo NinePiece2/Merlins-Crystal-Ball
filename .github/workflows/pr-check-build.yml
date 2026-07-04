@@ -1,0 +1,37 @@
+name: PR Build Test
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 26
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Drizzle
+        run: npm run db:generate
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Run build
+        env:
+          CI: false
+          DATABASE_URL: "postgresql://dummy:dummy@localhost:5432/dummy"
+        run: npm run build
+
+      - name: Build Docker image
+        run: docker build -t merlins-crystal-ball:test .
