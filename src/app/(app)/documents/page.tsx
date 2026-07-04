@@ -133,31 +133,6 @@ export default function DocumentsPage() {
     "isAdmin" in session.user &&
     (session.user as unknown as { isAdmin: boolean }).isAdmin;
 
-  useEffect(() => {
-    if (isPending) return;
-
-    // Allow all authenticated users to view documents
-    if (!session?.user) {
-      router.push("/login");
-      return;
-    }
-
-    fetchDocuments();
-  }, [session, isPending, router]);
-
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      startTransition(() => {
-        setDebouncedSearchQuery(searchQuery);
-      });
-    }, 500);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchQuery, startTransition]);
-
   const fetchDocuments = async () => {
     try {
       const response = await fetch("/api/documents");
@@ -172,6 +147,35 @@ export default function DocumentsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (isPending) return;
+
+    // Allow all authenticated users to view documents
+    if (!session?.user) {
+      router.push("/login");
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetchDocuments();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [session, isPending, router]);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      startTransition(() => {
+        setDebouncedSearchQuery(searchQuery);
+      });
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [searchQuery, startTransition]);
 
   const handleUpload = async (
     data: { title: string; description: string; file: File },
@@ -418,10 +422,12 @@ export default function DocumentsPage() {
 
   const handleSearchChange = useCallback((value: string) => {
     setSearchQuery(value);
+    setCurrentPage(1);
   }, []);
 
   const handleClearSearch = useCallback(() => {
     setSearchQuery("");
+    setCurrentPage(1);
   }, []);
 
   const filteredDocuments = useMemo(
@@ -436,11 +442,6 @@ export default function DocumentsPage() {
         .sort((a, b) => a.title.localeCompare(b.title)),
     [documents, debouncedSearchQuery],
   );
-
-  // Reset to page 1 when search query changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedSearchQuery]);
 
   const totalPages = itemsPerPage === 0 ? 1 : Math.ceil(filteredDocuments.length / itemsPerPage);
   const paginatedDocuments = useMemo(() => {

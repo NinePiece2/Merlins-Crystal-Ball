@@ -84,24 +84,6 @@ export default function AdminPage() {
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
   const [originalAdminId, setOriginalAdminId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (isPending) return;
-
-    // Middleware ensures user is authenticated
-    const isAdmin =
-      session?.user &&
-      "isAdmin" in session.user &&
-      (session.user as unknown as { isAdmin: boolean }).isAdmin;
-
-    if (!isAdmin) {
-      router.push("/");
-      return;
-    }
-
-    fetchUsers();
-    fetchCampaigns();
-  }, [session, isPending, router]);
-
   const fetchUsers = async () => {
     try {
       const response = await fetch("/api/admin/users");
@@ -132,6 +114,28 @@ export default function AdminPage() {
       console.error("Failed to fetch campaigns:", err);
     }
   };
+
+  useEffect(() => {
+    if (isPending) return;
+
+    // Middleware ensures user is authenticated
+    const isAdmin =
+      session?.user &&
+      "isAdmin" in session.user &&
+      (session.user as unknown as { isAdmin: boolean }).isAdmin;
+
+    if (!isAdmin) {
+      router.push("/");
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetchUsers();
+      void fetchCampaigns();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, [session, isPending, router]);
 
   const handleAddCampaign = async (e: React.FormEvent) => {
     e.preventDefault();

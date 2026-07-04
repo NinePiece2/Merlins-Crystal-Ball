@@ -15,20 +15,16 @@ function ResetPasswordContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
-  const [invalidToken, setInvalidToken] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
+  const invalidToken = !token && searchParams.get("error") === "INVALID_TOKEN";
 
   useEffect(() => {
-    if (!token) {
-      if (searchParams.get("error") === "INVALID_TOKEN") {
-        setInvalidToken(true);
-      } else {
-        router.push("/forgot-password");
-      }
+    if (!token && !invalidToken) {
+      router.push("/forgot-password");
     }
-  }, [token, searchParams, router]);
+  }, [token, invalidToken, router]);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) {

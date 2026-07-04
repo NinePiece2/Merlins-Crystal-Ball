@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Upload, AlertCircle } from "lucide-react";
@@ -49,30 +49,12 @@ export function FileUpload({
   existingLevels = [],
 }: FileUploadProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [level, setLevel] = useState<string>(defaultLevel.toString());
+  const [level, setLevel] = useState<string>(() => defaultLevel.toString());
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showConfirmOverwrite, setShowConfirmOverwrite] = useState(false);
   const [pendingUpload, setPendingUpload] = useState<{ file: File; level: number } | null>(null);
-
-  // Update level when dialog opens or defaultLevel changes
-  useEffect(() => {
-    if (open) {
-      setLevel(defaultLevel.toString());
-    }
-  }, [open, defaultLevel]);
-
-  // Clean up form when dialog closes
-  useEffect(() => {
-    if (!open) {
-      setFile(null);
-      setLevel(defaultLevel.toString());
-      setError("");
-      setUploadProgress(0);
-      setUploading(false);
-    }
-  }, [open, defaultLevel]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];

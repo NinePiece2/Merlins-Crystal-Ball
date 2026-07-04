@@ -19,11 +19,6 @@ export default function HomePage() {
   const [selectedCharacterId, setSelectedCharacterId] = useState<string | null>(null);
   const [uploadingLevels, setUploadingLevels] = useState<Set<string>>(new Set());
 
-  // Fetch characters on mount
-  useEffect(() => {
-    fetchCharacters();
-  }, []);
-
   const fetchCharacters = async () => {
     try {
       setLoading(true);
@@ -37,6 +32,15 @@ export default function HomePage() {
       setLoading(false);
     }
   };
+
+  // Fetch characters on mount
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void fetchCharacters();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   const handleCreateCharacter = async (formData: {
     name: string;
@@ -192,6 +196,7 @@ export default function HomePage() {
             />
 
             <FileUpload
+              key={`${selectedCharacterId ?? "none"}-${showLevelUpload ? "open" : "closed"}-${getDefaultLevel(characters, selectedCharacterId)}`}
               open={showLevelUpload}
               onOpenChange={setShowLevelUpload}
               onUpload={(file, level) => handleUploadLevel(selectedCharacterId || "", file, level)}
@@ -210,6 +215,7 @@ export default function HomePage() {
       </div>
 
       <CharacterEditDialog
+        key={`${selectedCharacter?.id ?? "none"}-${showEditDialog ? "open" : "closed"}`}
         open={showEditDialog}
         character={selectedCharacter}
         onOpenChange={setShowEditDialog}

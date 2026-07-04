@@ -26,10 +26,6 @@ export default function CampaignsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
-
   const fetchCampaigns = async () => {
     try {
       setLoading(true);
@@ -43,6 +39,14 @@ export default function CampaignsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void fetchCampaigns();
+    }, 0);
+
+    return () => window.clearTimeout(timeout);
+  }, []);
 
   return (
     <div className="min-h-[calc(100vh-65px)] bg-linear-to-b from-background via-background to-secondary/5">

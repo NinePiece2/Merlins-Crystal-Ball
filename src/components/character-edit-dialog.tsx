@@ -32,18 +32,13 @@ export function CharacterEditDialog({
   onSave,
 }: CharacterEditDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState(character?.name || "");
-  const [profileImage, setProfileImage] = useState<string | null>(character?.profileImage || null);
+  const [name, setName] = useState(() => character?.name || "");
+  const [profileImage, setProfileImage] = useState<string | null>(
+    () => character?.profileImage || null,
+  );
   const [showCropDialog, setShowCropDialog] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  React.useEffect(() => {
-    if (character) {
-      setName(character.name);
-      setProfileImage(character.profileImage || null);
-    }
-  }, [character, open]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

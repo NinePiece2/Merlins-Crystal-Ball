@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef } from "react";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,33 +11,33 @@ import { Spinner } from "@/components/ui/spinner";
 import { ImageCropDialog } from "@/components/image-crop-dialog";
 import { AlertCircle, Upload } from "lucide-react";
 
+type SettingsUser = {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+} | null;
+
 export default function SettingsPage() {
   const { data: session } = useSession();
+
+  return <SettingsContent key={session?.user?.email ?? "anonymous"} user={session?.user ?? null} />;
+}
+
+function SettingsContent({ user }: { user: SettingsUser }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [uploadingPfp, setUploadingPfp] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
-  const [pfpPreview, setPfpPreview] = useState<string | null>(session?.user?.image || null);
+  const [pfpPreview, setPfpPreview] = useState<string | null>(user?.image || null);
   const [showCropDialog, setShowCropDialog] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    name: session?.user?.name || "",
-    email: session?.user?.email || "",
+    name: user?.name || "",
+    email: user?.email || "",
     currentPassword: "",
     password: "",
     confirmPassword: "",
   });
-
-  useEffect(() => {
-    if (session?.user) {
-      setFormData((prev) => ({
-        ...prev,
-        name: session.user.name || "",
-        email: session.user.email || "",
-      }));
-      setPfpPreview(session.user.image || null);
-    }
-  }, [session]);
 
   const handlePfpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -224,9 +224,9 @@ export default function SettingsPage() {
             <h3 className="text-lg font-semibold mb-4">Profile Picture</h3>
             <div className="flex items-center gap-6">
               <Avatar className="w-24 h-24">
-                <AvatarImage src={pfpPreview || undefined} alt={session?.user?.name || "User"} />
+                <AvatarImage src={pfpPreview || undefined} alt={user?.name || "User"} />
                 <AvatarFallback className="text-2xl font-semibold">
-                  {(session?.user?.name || session?.user?.email || "U")
+                  {(user?.name || user?.email || "U")
                     .split(" ")
                     .slice(0, 2)
                     .map((n) => n[0])
