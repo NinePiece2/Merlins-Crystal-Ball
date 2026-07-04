@@ -1,4 +1,4 @@
-name: PR Build Lint Check
+name: PR Lint Check
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  lint-check:
     runs-on: ubuntu-latest
 
     steps:
