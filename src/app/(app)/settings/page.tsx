@@ -204,6 +204,8 @@ function SettingsContent({ user }: { user: SettingsUser }) {
 
         {message && (
           <div
+            role="status"
+            aria-live="polite"
             className={`flex items-start gap-3 p-4 rounded-lg border ${
               message.type === "success"
                 ? "bg-green-50 border-green-200 text-green-900"
@@ -277,6 +279,7 @@ function SettingsContent({ user }: { user: SettingsUser }) {
                 <Input
                   id="name"
                   name="name"
+                  autoComplete="name"
                   value={formData.name}
                   onChange={handleChange}
                   placeholder="Enter your full name"
@@ -290,6 +293,8 @@ function SettingsContent({ user }: { user: SettingsUser }) {
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
+                  spellCheck={false}
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="Enter your email"
@@ -323,6 +328,7 @@ function SettingsContent({ user }: { user: SettingsUser }) {
                   id="currentPassword"
                   name="currentPassword"
                   type="password"
+                  autoComplete="current-password"
                   value={formData.currentPassword}
                   onChange={handleChange}
                   placeholder="Enter your current password"
@@ -336,6 +342,7 @@ function SettingsContent({ user }: { user: SettingsUser }) {
                   id="password"
                   name="password"
                   type="password"
+                  autoComplete="new-password"
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Enter new password (minimum 8 characters)"
@@ -349,6 +356,7 @@ function SettingsContent({ user }: { user: SettingsUser }) {
                   id="confirmPassword"
                   name="confirmPassword"
                   type="password"
+                  autoComplete="new-password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   placeholder="Confirm new password"
