@@ -53,8 +53,8 @@ export default function CampaignsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-5xl font-bold tracking-tight">Campaigns</h1>
-            <p className="text-lg text-muted-foreground mt-2">
+            <h1 className="text-5xl font-bold tracking-tight text-wrap-balance">Campaigns</h1>
+            <p className="text-lg text-muted-foreground mt-2 text-pretty">
               Select a campaign to view details and manage your party.
             </p>
           </div>
@@ -76,8 +76,12 @@ export default function CampaignsPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {campaigns.map((campaign) => (
-              <Link key={campaign.id} href={`/campaigns/${campaign.id}`}>
-                <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <Link
+                key={campaign.id}
+                href={`/campaigns/${campaign.id}`}
+                className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <Card className="group h-full p-6 hover:shadow-lg transition-shadow cursor-pointer">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-semibold">{campaign.name}</h3>
                     <Badge variant="outline">{campaign.party?.length || 0} characters</Badge>
@@ -119,15 +123,7 @@ export default function CampaignsPage() {
                   )}
 
                   <div className="flex gap-2 pt-4 border-t">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        window.location.href = `/campaigns/${campaign.id}`;
-                      }}
-                    >
+                    <Button variant="outline" size="sm" className="flex-1">
                       View
                     </Button>
                   </div>

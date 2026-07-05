@@ -1,7 +1,8 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useRouter, usePathname } from "next/navigation";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,6 +34,7 @@ export function Navigation() {
   const { data: session, isPending } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   const isHomePage = pathname === "/";
   const isCampaignsPage = pathname?.startsWith("/campaigns");
@@ -63,6 +65,21 @@ export function Navigation() {
 
   const isAdmin = user && "isAdmin" in user && (user as unknown as { isAdmin: boolean }).isAdmin;
 
+  const desktopNavLinkClass = (active: boolean) =>
+    buttonVariants({
+      variant: "ghost",
+      size: "sm",
+      className: active ? "bg-accent text-accent-foreground" : "",
+    });
+
+  const mobileNavLinkClass = (active: boolean) =>
+    buttonVariants({
+      variant: "ghost",
+      className: `w-full justify-start h-12 ${active ? "bg-accent text-accent-foreground" : ""}`,
+    });
+
+  const iconLinkClass = buttonVariants({ variant: "outline", size: "icon-sm" });
+
   const handleLogout = async () => {
     await signOut();
     router.push("/login");
@@ -70,9 +87,9 @@ export function Navigation() {
   return (
     <motion.div
       className="bg-background"
-      initial={{ opacity: 0 }}
+      initial={prefersReducedMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
+      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.3 }}
     >
       <nav className="bg-card border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -80,39 +97,35 @@ export function Navigation() {
             {/* Desktop Navigation */}
             <motion.div
               className="hidden lg:flex items-center gap-2"
-              initial={{ x: -20, opacity: 0 }}
+              initial={prefersReducedMotion ? false : { x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, delay: 0.1 }}
             >
-              <motion.button
-                onClick={() => router.push("/")}
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <Link
+                href="/"
+                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md"
+                aria-label="Merlin's Crystal Ball home"
               >
-                {/* <IconOne className="h-12 w-12" /> */}
-
                 <span className="hidden sm:block">
                   <span className="block text-black dark:text-white font-bold text-xl">
                     Merlin&apos;s Crystal Ball
                   </span>
                 </span>
-              </motion.button>
+              </Link>
 
               <div className="h-8 w-px bg-border mx-4" />
 
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Button
-                      variant="ghost"
-                      onClick={() => router.push("/")}
-                      className={isHomePage ? "bg-accent text-accent-foreground" : ""}
-                      size="sm"
+                    <Link
+                      href="/"
+                      aria-current={isHomePage ? "page" : undefined}
+                      className={desktopNavLinkClass(isHomePage)}
                     >
-                      <Home className="w-4 h-4 mr-2" />
+                      <Home className="w-4 h-4 mr-2" aria-hidden="true" />
                       Home
-                    </Button>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent>View your characters</TooltipContent>
                 </Tooltip>
@@ -121,15 +134,14 @@ export function Navigation() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Button
-                      variant="ghost"
-                      onClick={() => router.push("/campaigns")}
-                      className={isCampaignsPage ? "bg-accent text-accent-foreground" : ""}
-                      size="sm"
+                    <Link
+                      href="/campaigns"
+                      aria-current={isCampaignsPage ? "page" : undefined}
+                      className={desktopNavLinkClass(isCampaignsPage)}
                     >
-                      <Compass className="w-4 h-4 mr-2" />
+                      <Compass className="w-4 h-4 mr-2" aria-hidden="true" />
                       Campaigns
-                    </Button>
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent>Manage your campaigns</TooltipContent>
                 </Tooltip>
@@ -140,17 +152,14 @@ export function Navigation() {
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
-                        <Button
-                          variant="ghost"
-                          onClick={() => router.push("/documents")}
-                          className={
-                            pathname === "/documents" ? "bg-accent text-accent-foreground" : ""
-                          }
-                          size="sm"
+                        <Link
+                          href="/documents"
+                          aria-current={pathname === "/documents" ? "page" : undefined}
+                          className={desktopNavLinkClass(pathname === "/documents")}
                         >
-                          <Book className="w-4 h-4 mr-2" />
+                          <Book className="w-4 h-4 mr-2" aria-hidden="true" />
                           Documents
-                        </Button>
+                        </Link>
                       </TooltipTrigger>
                       <TooltipContent>
                         {isAdmin ? "Manage documents" : "View documents"}
@@ -172,9 +181,9 @@ export function Navigation() {
                               }
                               size="sm"
                             >
-                              <Printer className="w-4 h-4 mr-2" />
+                              <Printer className="w-4 h-4 mr-2" aria-hidden="true" />
                               Printables
-                              <ChevronDown className="w-4 h-4 ml-1" />
+                              <ChevronDown className="w-4 h-4 ml-1" aria-hidden="true" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="start">
@@ -182,7 +191,7 @@ export function Navigation() {
                               className="cursor-pointer"
                               onClick={() => router.push("/printables/spells")}
                             >
-                              <Wand2 className="w-4 h-4 mr-2" />
+                              <Wand2 className="w-4 h-4 mr-2" aria-hidden="true" />
                               Spells
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -196,17 +205,14 @@ export function Navigation() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger>
-                          <Button
-                            variant="ghost"
-                            onClick={() => router.push("/admin")}
-                            className={
-                              pathname === "/admin" ? "bg-accent text-accent-foreground" : ""
-                            }
-                            size="sm"
+                          <Link
+                            href="/admin"
+                            aria-current={pathname === "/admin" ? "page" : undefined}
+                            className={desktopNavLinkClass(pathname === "/admin")}
                           >
-                            <Shield className="w-4 h-4 mr-2" />
+                            <Shield className="w-4 h-4 mr-2" aria-hidden="true" />
                             Admin
-                          </Button>
+                          </Link>
                         </TooltipTrigger>
                         <TooltipContent>Manage users and campaigns</TooltipContent>
                       </Tooltip>
@@ -219,28 +225,27 @@ export function Navigation() {
             {/* Mobile Logo */}
             <motion.div
               className="flex lg:hidden items-center"
-              initial={{ x: -20, opacity: 0 }}
+              initial={prefersReducedMotion ? false : { x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, delay: 0.1 }}
             >
-              <motion.button
-                onClick={() => router.push("/")}
-                className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-                whileTap={{ scale: 0.95 }}
+              <Link
+                href="/"
+                className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background rounded-md"
+                aria-label="Merlin's Crystal Ball home"
               >
-                {/* <IconOne className="h-10 w-10" /> */}
                 <span className="block text-black dark:text-white font-bold text-lg">
                   Merlin&apos;s Crystal Ball
                 </span>
-              </motion.button>
+              </Link>
             </motion.div>
 
             {/* Desktop Right Side */}
             <motion.div
               className="hidden lg:flex items-center space-x-2"
-              initial={{ x: 20, opacity: 0 }}
+              initial={prefersReducedMotion ? false : { x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, delay: 0.1 }}
             >
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {user?.name || user?.email || "Loading..."}
@@ -262,9 +267,9 @@ export function Navigation() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Button variant="outline" onClick={() => router.push("/settings")} size="sm">
-                      <Settings className="w-4 h-4" />
-                    </Button>
+                    <Link href="/settings" aria-label="Account settings" className={iconLinkClass}>
+                      <Settings className="w-4 h-4" aria-hidden="true" />
+                    </Link>
                   </TooltipTrigger>
                   <TooltipContent>Account settings</TooltipContent>
                 </Tooltip>
@@ -273,8 +278,13 @@ export function Navigation() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <Button variant="outline" onClick={handleLogout} size="sm">
-                      <LogOut className="w-4 h-4" />
+                    <Button
+                      variant="outline"
+                      onClick={handleLogout}
+                      size="sm"
+                      aria-label="Sign out"
+                    >
+                      <LogOut className="w-4 h-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Sign out</TooltipContent>
@@ -285,16 +295,23 @@ export function Navigation() {
             {/* Mobile Menu Button */}
             <motion.div
               className="flex lg:hidden items-center"
-              initial={{ x: 20, opacity: 0 }}
+              initial={prefersReducedMotion ? false : { x: 20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+              transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, delay: 0.1 }}
             >
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+                aria-expanded={mobileMenuOpen}
+                aria-controls="mobile-navigation-menu"
               >
-                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="h-6 w-6" aria-hidden="true" />
+                )}
               </Button>
             </motion.div>
           </div>
@@ -316,11 +333,12 @@ export function Navigation() {
 
               <motion.div
                 ref={mobileMenuRef}
-                className="lg:hidden border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 relative z-50"
-                initial={{ opacity: 0, height: 0 }}
+                id="mobile-navigation-menu"
+                className="lg:hidden max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-t border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60 relative z-50"
+                initial={prefersReducedMotion ? false : { opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2 }}
               >
                 <div className="px-4 py-6 space-y-6">
                   {/* User Profile Section */}
@@ -352,95 +370,71 @@ export function Navigation() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                       Navigation
                     </p>
-                    <Button
-                      variant="ghost"
-                      className={`w-full justify-start h-12 ${
-                        isHomePage ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                      onClick={() => {
-                        router.push("/");
-                        setMobileMenuOpen(false);
-                      }}
+                    <Link
+                      href="/"
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={isHomePage ? "page" : undefined}
+                      className={mobileNavLinkClass(isHomePage)}
                     >
-                      <Home className="w-5 h-5 mr-3" />
+                      <Home className="w-5 h-5 mr-3" aria-hidden="true" />
                       <span className="font-medium">Home</span>
-                    </Button>
+                    </Link>
 
-                    <Button
-                      variant="ghost"
-                      className={`w-full justify-start h-12 ${
-                        isCampaignsPage ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                      onClick={() => {
-                        router.push("/campaigns");
-                        setMobileMenuOpen(false);
-                      }}
+                    <Link
+                      href="/campaigns"
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={isCampaignsPage ? "page" : undefined}
+                      className={mobileNavLinkClass(isCampaignsPage)}
                     >
-                      <Compass className="w-5 h-5 mr-3" />
+                      <Compass className="w-5 h-5 mr-3" aria-hidden="true" />
                       <span className="font-medium">Campaigns</span>
-                    </Button>
+                    </Link>
 
                     {user && (
                       <>
-                        <Button
-                          variant="ghost"
-                          className={`w-full justify-start h-12 ${
-                            pathname === "/documents" ? "bg-accent text-accent-foreground" : ""
-                          }`}
-                          onClick={() => {
-                            router.push("/documents");
-                            setMobileMenuOpen(false);
-                          }}
+                        <Link
+                          href="/documents"
+                          onClick={() => setMobileMenuOpen(false)}
+                          aria-current={pathname === "/documents" ? "page" : undefined}
+                          className={mobileNavLinkClass(pathname === "/documents")}
                         >
-                          <Book className="w-5 h-5 mr-3" />
+                          <Book className="w-5 h-5 mr-3" aria-hidden="true" />
                           <span className="font-medium">Documents</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className={`w-full justify-start h-12 ${
-                            pathname?.startsWith("/printables")
-                              ? "bg-accent text-accent-foreground"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            router.push("/printables/spells");
-                            setMobileMenuOpen(false);
-                          }}
+                        </Link>
+                        <Link
+                          href="/printables/spells"
+                          onClick={() => setMobileMenuOpen(false)}
+                          aria-current={pathname?.startsWith("/printables") ? "page" : undefined}
+                          className={mobileNavLinkClass(
+                            pathname?.startsWith("/printables") || false,
+                          )}
                         >
-                          <Printer className="w-5 h-5 mr-3" />
+                          <Printer className="w-5 h-5 mr-3" aria-hidden="true" />
                           <span className="font-medium">Printables</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          className={`w-full justify-start h-12 ml-6 ${
-                            pathname?.startsWith("/printables/spells")
-                              ? "bg-accent text-accent-foreground"
-                              : ""
-                          }`}
-                          onClick={() => {
-                            router.push("/printables/spells");
-                            setMobileMenuOpen(false);
-                          }}
+                        </Link>
+                        <Link
+                          href="/printables/spells"
+                          onClick={() => setMobileMenuOpen(false)}
+                          aria-current={
+                            pathname?.startsWith("/printables/spells") ? "page" : undefined
+                          }
+                          className={`${mobileNavLinkClass(pathname?.startsWith("/printables/spells") || false)} ml-6`}
                         >
                           <span className="font-medium text-sm">Spells</span>
-                        </Button>
+                        </Link>
                       </>
                     )}
 
                     {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        className={`w-full justify-start h-12 ${
-                          pathname === "/admin" ? "bg-accent text-accent-foreground" : ""
-                        }`}
-                        onClick={() => {
-                          router.push("/admin");
-                          setMobileMenuOpen(false);
-                        }}
+                      <Link
+                        href="/admin"
+                        onClick={() => setMobileMenuOpen(false)}
+                        aria-current={pathname === "/admin" ? "page" : undefined}
+                        className={mobileNavLinkClass(pathname === "/admin")}
                       >
-                        <Shield className="w-5 h-5 mr-3" />
+                        <Shield className="w-5 h-5 mr-3" aria-hidden="true" />
                         <span className="font-medium">Admin Panel</span>
-                      </Button>
+                      </Link>
                     )}
                   </div>
 
@@ -449,19 +443,15 @@ export function Navigation() {
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                       Settings
                     </p>
-                    <Button
-                      variant="ghost"
-                      className={`w-full justify-start h-12 ${
-                        pathname === "/settings" ? "bg-accent text-accent-foreground" : ""
-                      }`}
-                      onClick={() => {
-                        router.push("/settings");
-                        setMobileMenuOpen(false);
-                      }}
+                    <Link
+                      href="/settings"
+                      onClick={() => setMobileMenuOpen(false)}
+                      aria-current={pathname === "/settings" ? "page" : undefined}
+                      className={mobileNavLinkClass(pathname === "/settings")}
                     >
-                      <Settings className="w-5 h-5 mr-3" />
+                      <Settings className="w-5 h-5 mr-3" aria-hidden="true" />
                       <span className="font-medium">Account Settings</span>
-                    </Button>
+                    </Link>
 
                     <div className="flex items-center justify-between px-3 py-3 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
                       <div className="flex items-center">
@@ -476,7 +466,7 @@ export function Navigation() {
                       className="w-full justify-start h-12 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950/30"
                       onClick={handleLogout}
                     >
-                      <LogOut className="w-5 h-5 mr-3" />
+                      <LogOut className="w-5 h-5 mr-3" aria-hidden="true" />
                       <span className="font-medium">Sign Out</span>
                     </Button>
                   </div>
