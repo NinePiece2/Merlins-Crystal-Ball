@@ -52,12 +52,13 @@
     "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@typescript/native": "npm:typescript@^7.0.2",
     "eslint": "^10",
     "eslint-config-next": "16.2.11",
     "jsdom": "^29.1.1",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
-    "typescript": "^7",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vitest": "^4.1.10"
   }
 }
