@@ -40,7 +40,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-easy-crop": "^6.2.3",
-    "shadcn": "^4.21.1",
+    "shadcn": "^4.21.2",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0",
     "tsx": "^4.23.15",
