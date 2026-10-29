@@ -21,7 +21,7 @@
     "@base-ui/react": "^1.9.0",
     "@types/archiver": "^8.0.0",
     "archiver": "^8.0.0",
-    "better-auth": "^1.7.12",
+    "better-auth": "^1.7.13",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^18.0.9",
